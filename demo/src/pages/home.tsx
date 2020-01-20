@@ -1,15 +1,29 @@
-import React, { useState, FormEvent } from 'react';
+import React, { useState, FormEvent, useRef } from 'react';
 import { Box, Form, FormField, Heading, Button } from 'grommet';
 import { useHistory } from 'react-router';
+import { getAppCommunity, findUserAccount } from 'ambient-stack';
+import { PulseLoader } from 'react-spinners';
+
 
 export function Home() {
 
-    const [state,setState] = useState({} as {username:string})
+    const [state, setState] = useState({} as { username: string, loading: boolean })
     const history = useHistory()
 
-    const onLogin = (evt:FormEvent)=> {
+    const onChange = (evt:any) => { 
+        setState({...state, username: evt.target.value})
+    }
+
+
+    const onLogin = async (evt: FormEvent) => {
         evt.preventDefault()
+        setState({...state, loading: true })
+        const c = getAppCommunity()
+
+        const acct = await findUserAccount(state.username)
+        console.log("found: ", acct)
         history.push("/sso?username=" + state.username)
+
         // on login, create a private key, store it, send the user over to their chosen wallet
         // on return from wallet
         // collect chaintreeID from the hash
@@ -17,13 +31,16 @@ export function Home() {
 
     return (
         <Box fill align="center" justify="center">
-            <Box width="large">
-                <Heading size="small">Home</Heading>
-                <Form onSubmit={onLogin}>
-                    <FormField type="text" label="Username" value={state.username} onChange={(evt)=> { setState({username: evt.target.value}) }}/>
-                    <Button primary type="submit" label="Submit"/>
-                </Form>
-            </Box>
+            {state.loading && <PulseLoader />}
+            {!state.loading &&
+                <Box width="large">
+                    <Heading size="small">Home</Heading>
+                    <Form onSubmit={onLogin}>
+                        <FormField label="Username" value={state.username} onChange={onChange} />
+                        <Button primary type="submit" label="Submit" />
+                    </Form>
+                </Box>
+            }
         </Box>
     )
 }
