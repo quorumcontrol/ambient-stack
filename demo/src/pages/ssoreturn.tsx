@@ -11,7 +11,7 @@ export function SSOReturnPage() {
       const username = query.get("username")
       if (username) {
         console.log("setting local storage to username")
-        localStorage.setItem("username", username)
+        sessionStorage.setItem("username", username)
       }
     }, [query])
 

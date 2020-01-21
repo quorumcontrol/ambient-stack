@@ -11,7 +11,7 @@ interface AmbientUserReturn {
 export function useAmbientUser():AmbientUserReturn {
     const [state,setState] = useState({loading: true} as AmbientUserReturn)
     //TODO: key on much more than just the localStorage
-    const stored = localStorage.getItem("username")
+    const stored = sessionStorage.getItem("username")
 
     useEffect(()=> {
         
