@@ -1,13 +1,8 @@
 import React, { MouseEvent } from 'react'
 import { Box, Text, Button } from 'grommet'
-import { useLocation, useHistory } from 'react-router'
+import { useHistory } from 'react-router'
 import { Checkmark } from 'grommet-icons'
-
-// A custom hook that builds on useLocation to parse
-// the query string for you.
-function useQuery() {
-    return new URLSearchParams(useLocation().search);
-}
+import { useQuery } from '../util/usequery'
 
 interface PermissionProps {
     name: string
@@ -28,16 +23,25 @@ export function SSO() {
     const query = useQuery()
     const history = useHistory()
 
+    const username = query.get('username')
+    if (!username) {
+        throw new Error("must specify a username in the queryparams")
+    }
+
     const onAllow = (evt:MouseEvent)=> {
         evt.preventDefault()
-        history.goBack()
+
+        const params = new URLSearchParams()
+        params.set("username", username)
+
+        history.replace("/ssoreturn?" + params.toString())
     }
 
     return (
         <Box fill align="center" justify="center" pad="1em">
             <Box width="large" border="all" pad="1em">
                 <Box margin={{bottom: "medium"}}>
-                <Text>Hello {query.get('username')}</Text>
+                <Text>Hello {username}</Text>
                 <Text>The app "demo app" wants to have the following permissions</Text>
                 </Box>
 
@@ -48,7 +52,6 @@ export function SSO() {
                     <Button label="deny" />
                 </Box>
             </Box>
-
         </Box>
     )
 }
