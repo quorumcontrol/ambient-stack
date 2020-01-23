@@ -1,35 +1,29 @@
 import React, { useState, FormEvent } from 'react';
 import { Box, Heading, Form, FormField, Text } from 'grommet';
 import { useAmbientUser } from '../util/user';
-import { DecentralizedDatabase, Reducer } from 'ambient-stack';
+import {useDecentralizedDatabase} from '../util/usedatabase';
+
+interface message {
+    body: string
+    from: string
+}
 
 interface AppState {
-    messages: string[]
+    messages: message[]
 }
 
-
-function useDatabase(name:string, reducer:Reducer<AppState,string>):[(action:string)=>void, AppState] {
-    const [db, setDb] = useState(undefined as undefined|DecentralizedDatabase<AppState,string>)
-    const [state,setState] = useState({} as AppState)
-
-    if (db !== undefined) {
-        return [db.dispatch.bind(db), state]
+const reducer = (doc:AppState, msg:message)=> {
+    if (doc.messages === undefined) {
+        doc.messages = []
     }
-    const newDb = new DecentralizedDatabase(name, reducer)
-    setState(newDb.state)
-    setDb(newDb)
-
-    newDb.on('update', ()=> {
-        setState(newDb.state)
-    })
-
-    return [newDb.dispatch.bind(newDb), state]
+    doc.messages.push(msg)
 }
 
-function Message({msg}:{msg:string}) {
+
+function Message({msg}:{msg:message}) {
     return (
         <Box pad="medium" border="bottom">
-            <Text>{msg}</Text>
+            <Text>{msg.from}: {msg.body}</Text>
         </Box>
     )
 }
@@ -41,25 +35,21 @@ export function Home() {
 
     const {user} = useAmbientUser()
 
-    const [dispatch, db] = useDatabase("ambientdemo", (doc, msg)=> {
-        if (doc.messages === undefined) {
-            doc.messages = []
-        }
-        doc.messages.push(msg)
-        return doc
-    })
+    const [dispatch, db] = useDecentralizedDatabase<AppState,message>("ambientdemo", reducer)
 
     const handleSubmit = (evt:FormEvent) => {
         evt.preventDefault()
-        dispatch(state.message)
-        setState({...state, message: ""})
+        if (user !== undefined) {
+            dispatch({body: state.message, from: user.userName})
+            setState({...state, message: ""})
+        }
     }
 
     return (
         <Box fill align="center" justify="center">
             <Box width="large">
                 <Heading>Hello {user?.userName}</Heading>
-                {!db.messages ? <Box /> : db.messages.map((msg, i)=> {
+                {!db.messages ? <Box /> : db.messages.map((msg:message, i:number)=> {
                     return (<Message msg={msg} key={i} />)
                 })}
                 <Form onSubmit={handleSubmit}>
