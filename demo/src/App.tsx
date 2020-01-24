@@ -72,9 +72,9 @@ const App: React.FC = () => {
           <Route path="/ssoreturn">
             <SSOReturnPage />
           </Route>
-          <AuthenticatedRoute path="/">
+          {/* <AuthenticatedRoute path="/"> */}
             <Home />
-          </AuthenticatedRoute>
+          {/* </AuthenticatedRoute> */}
         </Switch>
 
       </Router>
