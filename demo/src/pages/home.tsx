@@ -29,7 +29,7 @@ export function Home() {
 
     // const {user} = useAmbientUser()
 
-    const [dispatch, db] = useDecentralizedDatabase<AppState,StandupProps>("today", reducer)
+    const [dispatch, db] = useDecentralizedDatabase<AppState,StandupProps>("demo.2020-01-25", reducer)
 
     const onChange = (evt:ChangeEvent<HTMLTextAreaElement|HTMLInputElement>) => {
         setStandup({...standup, [evt.target.name]: evt.target.value})
