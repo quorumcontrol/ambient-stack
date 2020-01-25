@@ -3,6 +3,26 @@ import { Community } from 'tupelo-wasm-sdk'
 import { EventEmitter } from 'events'
 import { getAppCommunity } from './community'
 
+const dagCBOR = require('ipld-dag-cbor')
+const PeerMonitor = require('ipfs-pubsub-peer-monitor')
+
+
+enum MessageType {
+    change,
+    initial
+}
+
+interface ChangeDoc {
+    type: MessageType.change
+    updates: any
+}
+
+interface InitialDoc {
+    type: MessageType.initial
+    initial: any
+}
+
+
 
 export type Reducer<S,A> = (state:S, action:A) => void
 
@@ -40,19 +60,66 @@ export class DecentralizedDatabase<S,A> extends EventEmitter  {
         const c = await getAppCommunity()
         console.log("subscribing to ", this.name)
         await c.node.pubsub.subscribe(this.name, (msg:any) => {
-            console.log("msg: ", msg, "data: ", Buffer.from(msg.data).toString())
-            let changes = JSON.parse(Buffer.from(msg.data).toString())
-            this.state = Automerge.applyChanges(this.state, changes)
-            this.emit('update', changes)
+            let decoded = dagCBOR.util.deserialize(Buffer.from(msg.data))
+            console.log("msg: ", msg, "decoded: ", decoded)
+
+            switch (decoded.type) {
+                case MessageType.change:
+                    console.log("applying change")
+                    this.state = Automerge.applyChanges(this.state, decoded.updates)
+                    break
+                case MessageType.initial:
+                    const otherDoc = Automerge.load(decoded.initial)
+
+                    const newDoc = Automerge.merge(this.state, otherDoc) as Automerge.FreezeObject<S>
+                    const changes = Automerge.getChanges(this.state, newDoc)
+
+                    this.state = newDoc
+
+                    c.node.pubsub.publish(this.name, dagCBOR.util.serialize({
+                        type: MessageType.change,
+                        updates: changes,
+                    })).catch((err:Error)=> {
+                        console.error("error publishing: ", err)
+                    })
+
+                    break
+                default:
+                    console.error("unknown messsage type: ", decoded.type)
+
+            }
+            this.emit('update', decoded.updates)
         })
+
+        const topicMonitor = new PeerMonitor(c.node.pubsub, this.name)
+        topicMonitor.on('join', (peer:any)=> {
+            console.log("peer joined: ", peer)
+            const currentState = Automerge.save(this.state)
+            const doc = {
+                type: MessageType.initial,
+                initial: currentState,
+            } as InitialDoc
+
+            c.node.pubsub.publish(this.name, dagCBOR.util.serialize(doc)).catch((err:Error)=> {
+                console.error("error publishing: ", err)
+            })
+        })
+
+      
         console.log("subscribed")
     }
 
     private async publishChanges(changes:Automerge.Change[]) {
+        const c = await getAppCommunity()
         this.emit('update', changes)
-        const c = await Community.getDefault()
         console.log("publishing: ", this.name)
-        c.node.pubsub.publish(this.name, JSON.stringify(changes)).catch((err:Error)=> {
+
+        const doc = {
+            type: MessageType.change,
+            updates: changes,
+        } as ChangeDoc
+
+        c.node.pubsub.publish(this.name, dagCBOR.util.serialize(doc)).catch((err:Error)=> {
             console.error("error publishing: ", err)
         })
     }

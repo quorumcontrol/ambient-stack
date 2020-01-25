@@ -8,3 +8,5 @@
 node_modules
 user.json
 .tmp
+/default
+/tupelolocal

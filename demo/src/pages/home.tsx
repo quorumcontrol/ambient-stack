@@ -25,16 +25,13 @@ const reducer = (doc: AppState, standup: StandupProps) => {
 
 export function Home() {
 
-    const userName = "alice"
-    const defaultIcon = <UserFemale size="xlarge" />
-
-    const [standup, setStandup] = useState({name: userName} as StandupProps)
+    const [standup, setStandup] = useState({} as StandupProps)
 
     // const {user} = useAmbientUser()
 
     const [dispatch, db] = useDecentralizedDatabase<AppState,StandupProps>("today", reducer)
 
-    const onChange = (evt:ChangeEvent<HTMLTextAreaElement>) => {
+    const onChange = (evt:ChangeEvent<HTMLTextAreaElement|HTMLInputElement>) => {
         setStandup({...standup, [evt.target.name]: evt.target.value})
         dispatch(standup)
     }
@@ -63,13 +60,17 @@ export function Home() {
                     <Box basis="small" alignSelf="center">
                         <Previous size="xlarge" />
                     </Box>
-                    <Box elevation="small" pad="medium" basis="1/4">
+                    {/* <Box elevation="small" pad="medium" basis="1/4">
                         <Heading size="small">Yesterday</Heading>
-                    </Box>
-                    <Box elevation="small" pad="medium" basis="1/4">
+                    </Box> */}
+                    <Box elevation="small" pad="medium" basis="1/2">
                         <Heading size="small">Today</Heading>
                         <Box>
+
+
                             <Form>
+                                <FormField type="text" name="name" label="name" value={standup.name} onChange={onChange}/>
+
                                 <FormField type="text" label="Plan for today?">
                                     <TextArea name="today" value={standup.today} onChange={onChange}/>
                                 </FormField>
@@ -80,13 +81,16 @@ export function Home() {
                                     <TextArea name="blockers" value={standup.blockers} onChange={onChange}/>
                                 </FormField>
                             </Form>
+
+
+
                         </Box>
                     </Box>
                     <Box pad="medium" align="center" alignSelf="center" basis="small">
-                        <Box width="120px" height="120px" round="full" overflow="hidden">
-                            <Image fit="cover" src={woman} />
+                        <Box width="120px" height="120px" round="full" overflow="hidden" align="center" alignContent="center">
+                            {(standup.name === "alice") ? <Image fit="contain" src={woman} /> : <User size="120px"/>}
                         </Box>
-                        <Text>You</Text>
+                        <Text>{standup.name}</Text>
                     </Box>
                 </Box>
 
@@ -101,8 +105,8 @@ export function Home() {
                     </Box>
 
                     <StandupReport 
-                        name="Bob"
-                        icon={<User size="xlarge"/>}
+                        name="Carol"
+                        icon={<UserFemale size="xlarge"/>}
                         today={`Beard copper mug biodiesel, chillwave pork belly quinoa +1. Enamel pin vinyl sriracha forage. Tbh mumblecore cronut yr skateboard. Hot chicken pickled ugh tousled gluten-free.`}
                         yesterday={`Tattooed raclette chicharrones occupy enamel pin coloring book neutra etsy disrupt woke copper mug portland. Slow-carb squid enamel pin, four loko 8-bit intelligentsia small batch keytar shabby chic fingerstache jean short`}
                     />

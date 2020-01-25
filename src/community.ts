@@ -1,13 +1,17 @@
 import {Community, Tupelo, EcdsaKey, ChainTree, setDataTransaction} from 'tupelo-wasm-sdk'
 import debug from 'debug'
 
+const isNode = require('is-node')
+
 const log = debug("util.community")
 
 let _appCommunityPromise: Promise<Community>
 
 declare const window:any;
 declare const Go:any;
-window.Community = Community
+if (!isNode) {
+    window.Community = Community
+}
 
 // if (window) {
 //     const subDirectory = window.location.pathname
