@@ -47,6 +47,7 @@ export class DecentralizedDatabase<S,A> extends EventEmitter  {
     private async publishChanges(changes:Automerge.Change[]) {
         this.emit('update', changes)
         const c = await Community.getDefault()
+        console.log("publishing: ", this.name)
         c.node.pubsub.publish(this.name, JSON.stringify(changes))
     }
 }

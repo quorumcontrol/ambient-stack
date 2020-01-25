@@ -1,53 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, ChangeEvent } from 'react';
 import { Box, Heading, Image, Text, Form, FormField, TextArea } from 'grommet';
 import { useAmbientUser } from '../util/user';
 import { useDecentralizedDatabase } from '../util/usedatabase';
 
 import woman from '../images/woman.jpg'
 import { Previous, UserFemale, User, Next } from 'grommet-icons';
-import { StandupReport } from '../components/standupreport';
+import { StandupReport, StandupProps } from '../components/standupreport';
 
-interface message {
-    body: string
-    from: string
-}
 
 interface AppState {
-    messages: message[]
+    standups: {[key: string]: StandupProps} 
 }
 
-const reducer = (doc: AppState, msg: message) => {
-    if (doc.messages === undefined) {
-        doc.messages = []
+const reducer = (doc: AppState, standup: StandupProps) => {
+    if (doc.standups === undefined) {
+        doc.standups = {}
     }
-    doc.messages.push(msg)
+    if (standup.today === undefined || standup.today === "") {
+        delete doc.standups[standup.name]
+        return
+    }
+    doc.standups[standup.name] = standup
 }
-
-
-function Message({ msg }: { msg: message }) {
-    return (
-        <Box pad="medium" border="bottom">
-            <Text>{msg.from}: {msg.body}</Text>
-        </Box>
-    )
-}
-
 
 export function Home() {
 
-    const [state, setState] = useState({} as { message: string })
+    const userName = "alice"
+    const defaultIcon = <UserFemale size="xlarge" />
+
+    const [standup, setStandup] = useState({name: userName} as StandupProps)
 
     // const {user} = useAmbientUser()
 
-    // const [dispatch, db] = useDecentralizedDatabase<AppState,message>("ambientdemo", reducer)
+    const [dispatch, db] = useDecentralizedDatabase<AppState,StandupProps>("2020-01-25", reducer)
 
-    // const handleSubmit = (evt:FormEvent) => {
-    //     evt.preventDefault()
-    //     if (user !== undefined) {
-    //         dispatch({body: state.message, from: user.userName})
-    //         setState({...state, message: ""})
-    //     }
-    // }
+    const onChange = (evt:ChangeEvent<HTMLTextAreaElement>) => {
+        setStandup({...standup, [evt.target.name]: evt.target.value})
+        dispatch(standup)
+    }
+
+    let todaysStandups:JSX.Element[] = []
+
+    if (db.standups) {
+        todaysStandups = Object.entries(db.standups).map(([_, value], i) => {
+            return (<StandupReport
+                key={i}
+                today={value.today}
+                yesterday={value.yesterday}
+                blockers={value.blockers}
+                name={value.name}
+                />
+            )
+        });
+    }
+    
 
     return (
         <Box fill align="center" justify="center">
@@ -65,13 +71,13 @@ export function Home() {
                         <Box>
                             <Form>
                                 <FormField type="text" label="Plan for today?">
-                                    <TextArea />
+                                    <TextArea name="today" value={standup.today} onChange={onChange}/>
                                 </FormField>
                                 <FormField type="text" label="Accomplished Yesterday?">
-                                    <TextArea />
+                                    <TextArea name="yesterday" value={standup.yesterday} onChange={onChange}/>
                                 </FormField>
                                 <FormField type="text" label="Blockers?">
-                                    <TextArea />
+                                    <TextArea name="blockers" value={standup.blockers} onChange={onChange}/>
                                 </FormField>
                             </Form>
                         </Box>
@@ -95,26 +101,13 @@ export function Home() {
                     </Box>
 
                     <StandupReport 
-                        name="Alice"
-                        icon={<UserFemale size="xlarge"/>}
-                        today={`Beard copper mug biodiesel, chillwave pork belly quinoa +1. Enamel pin vinyl sriracha forage. Tbh mumblecore cronut yr skateboard. Hot chicken pickled ugh tousled gluten-free.`}
-                        yesterday={`Tattooed raclette chicharrones occupy enamel pin coloring book neutra etsy disrupt woke copper mug portland. Slow-carb squid enamel pin, four loko 8-bit intelligentsia small batch keytar shabby chic fingerstache jean short`}
-                    />
-
-                    <StandupReport 
                         name="Bob"
                         icon={<User size="xlarge"/>}
                         today={`Beard copper mug biodiesel, chillwave pork belly quinoa +1. Enamel pin vinyl sriracha forage. Tbh mumblecore cronut yr skateboard. Hot chicken pickled ugh tousled gluten-free.`}
                         yesterday={`Tattooed raclette chicharrones occupy enamel pin coloring book neutra etsy disrupt woke copper mug portland. Slow-carb squid enamel pin, four loko 8-bit intelligentsia small batch keytar shabby chic fingerstache jean short`}
                     />
 
-                    <StandupReport 
-                        name="Carol"
-                        icon={<UserFemale size="xlarge"/>}
-                        today={`Beard copper mug biodiesel, chillwave pork belly quinoa +1. Enamel pin vinyl sriracha forage. Tbh mumblecore cronut yr skateboard. Hot chicken pickled ugh tousled gluten-free.`}
-                        yesterday={`Tattooed raclette chicharrones occupy enamel pin coloring book neutra etsy disrupt woke copper mug portland. Slow-carb squid enamel pin, four loko 8-bit intelligentsia small batch keytar shabby chic fingerstache jean short`}
-                    />
-
+                    {todaysStandups}
                     
 
                     <Box basis="small" alignSelf="center">
