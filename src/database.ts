@@ -1,6 +1,7 @@
 import * as Automerge from 'automerge'
 import { Community } from 'tupelo-wasm-sdk'
 import { EventEmitter } from 'events'
+import { getAppCommunity } from './community'
 
 
 export type Reducer<S,A> = (state:S, action:A) => void
@@ -35,19 +36,24 @@ export class DecentralizedDatabase<S,A> extends EventEmitter  {
     }
 
     private async listen() {
-        const c = await Community.getDefault()
-        c.node.pubsub.subscribe(this.name, (msg:any) => {
+        console.log("awaiting community")
+        const c = await getAppCommunity()
+        console.log("subscribing to ", this.name)
+        await c.node.pubsub.subscribe(this.name, (msg:any) => {
             console.log("msg: ", msg, "data: ", Buffer.from(msg.data).toString())
             let changes = JSON.parse(Buffer.from(msg.data).toString())
             this.state = Automerge.applyChanges(this.state, changes)
             this.emit('update', changes)
         })
+        console.log("subscribed")
     }
 
     private async publishChanges(changes:Automerge.Change[]) {
         this.emit('update', changes)
         const c = await Community.getDefault()
         console.log("publishing: ", this.name)
-        c.node.pubsub.publish(this.name, JSON.stringify(changes))
+        c.node.pubsub.publish(this.name, JSON.stringify(changes)).catch((err:Error)=> {
+            console.error("error publishing: ", err)
+        })
     }
 }

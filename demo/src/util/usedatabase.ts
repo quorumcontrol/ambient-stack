@@ -1,8 +1,10 @@
 import {useState} from 'react'
 import {FreezeObject} from 'automerge'
-import { DecentralizedDatabase, Reducer } from 'ambient-stack';
+import { DecentralizedDatabase, Reducer, getAppCommunity } from 'ambient-stack';
 
 export function useDecentralizedDatabase<S,A>(name:string, reducer:Reducer<S,A>):[(action:A)=>void, S] {
+    getAppCommunity() // just to make sure it gets setup
+
     const [db, setDb] = useState(undefined as undefined|DecentralizedDatabase<S,A>)
     const [state,setState] = useState({} as FreezeObject<S>)
 
