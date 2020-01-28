@@ -1,9 +1,10 @@
-import React, { useState, ChangeEvent } from 'react';
+import React, { useState, ChangeEvent, useEffect } from 'react';
 import { Box, Heading, Image, Text, Form, FormField, TextArea } from 'grommet';
-import { useAmbientUser } from '../util/user';
+import { useAmbientUser, getIcon } from '../util/user';
 import { useDecentralizedDatabase } from '../util/usedatabase';
 
 import woman from '../images/woman.jpg'
+import man from '../images/man.jpg'
 import { Previous, UserFemale, User, Next } from 'grommet-icons';
 import { StandupReport, StandupProps } from '../components/standupreport';
 
@@ -25,16 +26,23 @@ const reducer = (doc: AppState, standup: StandupProps) => {
 
 export function Home() {
 
-    const [standup, setStandup] = useState({} as StandupProps)
-
     // const {user} = useAmbientUser()
+
+    const [standup, setStandup] = useState({} as StandupProps)
 
     const [dispatch, db] = useDecentralizedDatabase<AppState,StandupProps>("demo.2020-01-25", reducer)
 
     const onChange = (evt:ChangeEvent<HTMLTextAreaElement|HTMLInputElement>) => {
-        setStandup({...standup, [evt.target.name]: evt.target.value})
-        dispatch(standup)
+        const newState = {...standup, [evt.target.name]: evt.target.value}
+        setStandup(newState)
+        dispatch(newState)
     }
+
+    // useEffect(()=> {
+    //     if (user) {
+    //         setStandup({...standup, name: user.userName})
+    //     }
+    // }, [user])
 
     let todaysStandups:JSX.Element[] = []
 
@@ -50,6 +58,8 @@ export function Home() {
             )
         });
     }
+
+    
     
 
     return (
@@ -60,9 +70,6 @@ export function Home() {
                     <Box basis="small" alignSelf="center">
                         <Previous size="xlarge" />
                     </Box>
-                    {/* <Box elevation="small" pad="medium" basis="1/4">
-                        <Heading size="small">Yesterday</Heading>
-                    </Box> */}
                     <Box elevation="small" pad="medium" basis="1/2">
                         <Heading size="small">Today</Heading>
                         <Box>
@@ -88,7 +95,7 @@ export function Home() {
                     </Box>
                     <Box pad="medium" align="center" alignSelf="center" basis="small">
                         <Box width="120px" height="120px" round="full" overflow="hidden" align="center" alignContent="center">
-                            {(standup.name === "alice") ? <Image fit="contain" src={woman} /> : <User size="120px"/>}
+                            {getIcon(standup.name)}
                         </Box>
                         <Text>{standup.name}</Text>
                     </Box>
@@ -106,7 +113,6 @@ export function Home() {
 
                     <StandupReport 
                         name="Carol"
-                        icon={<UserFemale size="xlarge"/>}
                         today={`Beard copper mug biodiesel, chillwave pork belly quinoa +1. Enamel pin vinyl sriracha forage. Tbh mumblecore cronut yr skateboard. Hot chicken pickled ugh tousled gluten-free.`}
                         yesterday={`Tattooed raclette chicharrones occupy enamel pin coloring book neutra etsy disrupt woke copper mug portland. Slow-carb squid enamel pin, four loko 8-bit intelligentsia small batch keytar shabby chic fingerstache jean short`}
                     />

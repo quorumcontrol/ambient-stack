@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Heading, Text} from 'grommet';
-import {  UserFemale, User } from 'grommet-icons';
+import { getIcon } from '../util/user';
 
 export interface StandupProps {
     name: string
@@ -12,13 +12,11 @@ export interface StandupProps {
 
 export function StandupReport({today,yesterday,blockers, name, icon}:StandupProps) {
 
-    const defaultIcon = (name === "alice") ? <UserFemale size="xlarge"/> : <User size="xlarge" />
-
     return (
         <Box elevation="small" pad="medium" basis="medium">
         <Box align="center">
             <Box width="120px" align="center" alignContent="center" height="120px" round="full" overflow="hidden" border="all">
-                {icon ? icon : defaultIcon}
+                {icon ? icon : getIcon(name)}
             </Box>
             <Heading size="24px">{name}</Heading>
 

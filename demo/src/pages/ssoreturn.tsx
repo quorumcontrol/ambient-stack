@@ -10,7 +10,7 @@ export function SSOReturnPage() {
     useEffect(()=>{
       const username = query.get("username")
       if (username) {
-        console.log("setting local storage to username")
+        console.log("setting local storage to username", username)
         sessionStorage.setItem("username", username)
       }
     }, [query])

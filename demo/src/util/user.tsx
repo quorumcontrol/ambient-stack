@@ -1,10 +1,37 @@
-import {useState, useEffect} from 'react'
+import React, {useState, useEffect} from 'react'
 import { User, getAppCommunity } from 'ambient-stack';
 import { ChainTree, EcdsaKey } from 'tupelo-wasm-sdk';
+
+import woman from '../images/woman.jpg'
+import man from '../images/man.jpg'
+import carol from '../images/carol.jpg'
+import { User as UserIcon } from 'grommet-icons';
+import { Image } from 'grommet';
 
 interface AmbientUserReturn {
     loading: boolean
     user?:User
+}
+
+export function getIcon(name:string): JSX.Element{
+    let userIcon
+    if (name === undefined) {
+        name = ""
+    }
+    switch (name.toLowerCase()) {
+        case 'alice':
+            userIcon = <Image fit="contain" src={woman} />;
+            break;
+        case 'bob':
+            userIcon = <Image fit="contain" src={man} />;
+            break;
+        case 'carol':
+            userIcon = <Image fit="contain" src={carol} />;
+            break;
+        default:
+            userIcon = <UserIcon size="120px"/>
+    }
+    return userIcon
 }
 
 // returns [loading,user]
