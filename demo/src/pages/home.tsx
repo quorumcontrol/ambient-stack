@@ -1,19 +1,17 @@
 import React, { useState, ChangeEvent, useEffect } from 'react';
-import { Box, Heading, Image, Text, Form, FormField, TextArea } from 'grommet';
+import { Box, Heading, Text, Form, FormField, TextArea } from 'grommet';
 import { useAmbientUser, getIcon } from '../util/user';
 import { useDecentralizedDatabase } from '../util/usedatabase';
 
-import woman from '../images/woman.jpg'
-import man from '../images/man.jpg'
-import { Previous, UserFemale, User, Next } from 'grommet-icons';
+import { Previous, Next } from 'grommet-icons';
 import { StandupReport, StandupProps } from '../components/standupreport';
 
 
-interface AppState {
+interface DailyState {
     standups: {[key: string]: StandupProps} 
 }
 
-const reducer = (doc: AppState, standup: StandupProps) => {
+const reducer = (doc: DailyState, standup: StandupProps) => {
     if (doc.standups === undefined) {
         doc.standups = {}
     }
@@ -26,11 +24,11 @@ const reducer = (doc: AppState, standup: StandupProps) => {
 
 export function Home() {
 
-    // const {user} = useAmbientUser()
+    const {user} = useAmbientUser()
 
     const [standup, setStandup] = useState({} as StandupProps)
 
-    const [dispatch, db] = useDecentralizedDatabase<AppState,StandupProps>("demo.2020-01-25", reducer)
+    const [dispatch, db] = useDecentralizedDatabase<DailyState,StandupProps>("demo.2020-01-28", reducer)
 
     const onChange = (evt:ChangeEvent<HTMLTextAreaElement|HTMLInputElement>) => {
         const newState = {...standup, [evt.target.name]: evt.target.value}
@@ -38,11 +36,11 @@ export function Home() {
         dispatch(newState)
     }
 
-    // useEffect(()=> {
-    //     if (user) {
-    //         setStandup({...standup, name: user.userName})
-    //     }
-    // }, [user])
+    useEffect(()=> {
+        if (user) {
+            setStandup({...standup, name: user.userName})
+        }
+    }, [user])
 
     let todaysStandups:JSX.Element[] = []
 
@@ -76,7 +74,7 @@ export function Home() {
 
 
                             <Form>
-                                <FormField type="text" name="name" label="name" value={standup.name} onChange={onChange}/>
+                                {/* <FormField type="text" name="name" label="name" value={standup.name} onChange={onChange}/> */}
 
                                 <FormField type="text" label="Plan for today?">
                                     <TextArea name="today" value={standup.today} onChange={onChange}/>
