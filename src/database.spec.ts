@@ -7,7 +7,7 @@ import {DecentralizedDatabase} from './database'
 
 describe("database", ()=> {
 
-    it("mutates", ()=> {
+    it("mutates", async ()=> {
 
         interface appState {
             name: string
@@ -22,7 +22,11 @@ describe("database", ()=> {
         }
 
         const db = new DecentralizedDatabase("db-test", reducer)
+        await db.start()
+        console.log('started')
+
         db.dispatch({type: 'hi'})
         expect(db.state.name).to.equal("bye")
+       
     })
 })
