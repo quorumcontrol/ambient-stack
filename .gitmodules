@@ -1,3 +1,0 @@
-[submodule "tupelo-wasm-sdk"]
-	path = tupelo-wasm-sdk
-	url = git@github.com:quorumcontrol/tupelo-wasm-sdk.git

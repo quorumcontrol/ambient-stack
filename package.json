@@ -4,7 +4,7 @@
   "description": "",
   "main": "lib/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha"
   },
   "author": "",
   "license": "ISC",
@@ -13,6 +13,7 @@
     "@types/mocha": "^5.2.7",
     "chai": "^4.2.0",
     "mocha": "^7.0.0",
+    "ts-node": "^8.6.2",
     "tslib": "^1.10.0",
     "typescript": "^3.7.5"
   },
@@ -24,6 +25,6 @@
     "ipfs-pubsub-peer-monitor": "0.0.9",
     "ipld-dag-cbor": "^0.15.1",
     "is-node": "^1.0.2",
-    "tupelo-wasm-sdk": "file:tupelo-wasm-sdk"
+    "tupelo-wasm-sdk": "^0.6.0-rc3"
   }
 }
