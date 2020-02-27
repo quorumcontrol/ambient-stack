@@ -2,6 +2,9 @@ import * as Automerge from 'automerge'
 import { Community, EcdsaKey, ChainTree, setOwnershipTransaction, setDataTransaction } from 'tupelo-wasm-sdk'
 import { EventEmitter } from 'events'
 import { getAppCommunity } from './community'
+import debug from 'debug'
+
+const log = debug('database')
 
 const dagCBOR = require('ipld-dag-cbor')
 const PeerMonitor = require('ipfs-pubsub-peer-monitor')
@@ -18,22 +21,18 @@ interface ChangeDoc {
     updates: any
 }
 
-interface InitialDoc {
-    type: MessageType.initial
-    initial: any
-}
-
-
-
 export type Reducer<S,A> = (state:S, action:A) => void
 
-export class DecentralizedDatabase<S,A> extends EventEmitter  {
+export class Database<S,A> extends EventEmitter  {
 
     state: Automerge.FreezeObject<S>
     reducer:Reducer<S,A>
     name:string
     started:boolean
+    peerCount: number
     userTree?:ChainTree
+
+    private _did?:Promise<string>
 
     private community:Promise<Community>
 
@@ -49,11 +48,21 @@ export class DecentralizedDatabase<S,A> extends EventEmitter  {
         this.reducer = reducer
         this.started = false
         this.community = getAppCommunity()
+        this.peerCount = 0
     }
 
     async did():Promise<string> {
-        const key = await EcdsaKey.passPhraseKey(Buffer.from(this.name), namespace)
-        return await key.toDid()
+        if (this._did) {
+            return this._did
+        }
+        this._did = new Promise(async (resolve) => {
+            const key = await EcdsaKey.passPhraseKey(Buffer.from(this.name), namespace)
+            resolve(key.toDid())
+        })
+
+        return this._did
+
+       
     }
 
     async create(adminKey:EcdsaKey) {
@@ -77,7 +86,7 @@ export class DecentralizedDatabase<S,A> extends EventEmitter  {
         })
 
         let txns = []
-        for (let did in dids) {
+        for (let did of dids) {
             txns.push(setDataTransaction("/writers/" + did, new Date().getTime()))
         }
 
@@ -98,10 +107,11 @@ export class DecentralizedDatabase<S,A> extends EventEmitter  {
 
         const changes = Automerge.getChanges(oldDoc, this.state)
         this.publishChanges(changes)
+        this.updateChainTree(changes)        
     }
 
     start(userTree:ChainTree) {
-        if (this.started) {
+        if (!this.started) {
             this.userTree = userTree
             this.started = true
             return this.listen()
@@ -110,52 +120,68 @@ export class DecentralizedDatabase<S,A> extends EventEmitter  {
     }
 
     private async getInitialState() {
-        const did = await this.did()
-        const tip = await c.getTip(did)
+        log("getting initial state")
+        const c = await this.community
 
-        const tree = new ChainTree({
+        const dbDid = await this.did()
+        const dbTip = await c.getTip(dbDid)
+
+        const dbTree = new ChainTree({
             store: c.blockservice,
-            tip: tip,
+            tip: dbTip,
         })
 
-        const resp = await tree.resolve("/writers")
-        const writers = resp.value as {[key: string]:number}
 
         // go through each writer and get their latest state and sync it to the automerge doc
+
+        const resp = await dbTree.resolveData("/writers")
+        log("writers resp: ", resp)
+        const writers= resp.value
+        log("writers: ", writers)
+        for (let did of Object.keys(writers)) {
+            log("getting tip for writer: ", did)
+            let tip
+            try {
+                tip = await c.getTip(did)
+            } catch(e) {
+                log(e)
+                if (e.toString() !== "error getting tip: not found") {
+                    console.error(e)
+                }
+                continue
+            }
+            const writerTree = new ChainTree({
+                store: c.blockservice,
+                tip: tip,
+            })
+            log("getting writer: ", did)
+            const resp = await writerTree.resolveData(dbDid + "/latest")
+            const latest = Automerge.load(resp.value)
+            const newDoc = Automerge.merge(this.state, latest) as Automerge.FreezeObject<S>
+            this.state = newDoc
+        }
+        this.emit('initialSync')
+        log("initial sync finished")
     }
 
     private async listen() {
-        console.log("awaiting community")
+        log("awaiting community")
         const c = await this.community
-        console.log("subscribing to ", this.name)
+        const did = await this.did()
 
-      
+        this.getInitialState()
 
-        await c.node.pubsub.subscribe(await this.did(), (msg:any) => {
+        log("subscribing to ", did)
+
+        await c.node.pubsub.subscribe(did, (msg:any) => {
             let decoded = dagCBOR.util.deserialize(Buffer.from(msg.data))
-            console.log("msg: ", msg, "decoded: ", decoded)
+            log("msg: ", msg, "decoded: ", decoded)
 
             switch (decoded.type) {
                 case MessageType.change:
-                    console.log("applying change")
+                    log("applying change")
                     this.state = Automerge.applyChanges(this.state, decoded.updates)
                     break
-                // case MessageType.initial:
-                //     const otherDoc = Automerge.load(decoded.initial)
-
-                //     const newDoc = Automerge.merge(this.state, otherDoc) as Automerge.FreezeObject<S>
-                //     const changes = Automerge.getChanges(this.state, newDoc)
-
-                //     this.state = newDoc
-
-                //     c.node.pubsub.publish(this.name, dagCBOR.util.serialize({
-                //         type: MessageType.change,
-                //         updates: changes,
-                //     })).catch((err:Error)=> {
-                //         console.error("error publishing: ", err)
-                //     })
-
-                //     break
                 default:
                     console.error("unknown messsage type: ", decoded.type)
 
@@ -163,37 +189,59 @@ export class DecentralizedDatabase<S,A> extends EventEmitter  {
             this.emit('update', decoded.updates)
         })
 
-        const topicMonitor = new PeerMonitor(c.node.pubsub, this.name)
-        topicMonitor.on('join', (peer:any)=> {
-            console.log("peer joined: ", peer)
-            // const currentState = Automerge.save(this.state)
-            // const doc = {
-            //     type: MessageType.initial,
-            //     initial: currentState,
-            // } as InitialDoc
+        this.setupPeerMonitor()
+        log("subscribed")
+        return
+    }
 
-            // c.node.pubsub.publish(this.name, dagCBOR.util.serialize(doc)).catch((err:Error)=> {
-            //     console.error("error publishing: ", err)
-            // })
+    private async setupPeerMonitor() {
+        const c = await this.community
+        const did = await this.did()
+
+        const topicMonitor = new PeerMonitor(c.node.pubsub, did)
+        let peers = await topicMonitor.getPeers()
+        this.peerCount = peers.length
+        
+        topicMonitor.on('join', (peer:any)=> {
+            log("peer joined: ", peer)
+            this.peerCount++
         })
 
-      
-        console.log("subscribed")
-        return
+        topicMonitor.on('leave', (peer:any)=> {
+            log("peer left: ", peer)
+            this.peerCount--
+        })
+
+    }
+
+    // TODO: this needs to be serialized and done one at a time
+    // and it should only happen every few seconds not on every change
+    // also consider storing the actual changes outside of the chaintree - maybe sia?
+    private async updateChainTree(changes:Automerge.Change[]) {
+        if (!this.userTree) {
+            throw new Error("you cannot update a userTree without a userTree")
+        }
+
+        const c = await getAppCommunity()
+        const did = await this.did()
+
+        const currentState = Automerge.save(this.state)
+
+        await c.playTransactions(this.userTree, [setDataTransaction(did + "/latest", currentState)])
+        log("chaintree updated")
+        this.emit('sync', changes)
     }
 
     private async publishChanges(changes:Automerge.Change[]) {
         const c = await getAppCommunity()
         const did = await this.did()
         this.emit('update', changes)
-        console.log("publishing: ", did)
+        log("publishing: ", did)
 
         const doc = {
             type: MessageType.change,
             updates: changes,
         } as ChangeDoc
-
-        // TODO: save this change to a writer chaintree
 
         c.node.pubsub.publish(did, dagCBOR.util.serialize(doc)).catch((err:Error)=> {
             console.error("error publishing: ", err)
