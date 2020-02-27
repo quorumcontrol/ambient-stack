@@ -25,7 +25,7 @@ export type Reducer<S,A> = (state:S, action:A) => void
 
 export class Database<S,A> extends EventEmitter  {
 
-    state: Automerge.FreezeObject<S>
+    private _state?: Automerge.FreezeObject<S>
     reducer:Reducer<S,A>
     name:string
     started:boolean
@@ -40,11 +40,6 @@ export class Database<S,A> extends EventEmitter  {
         super()
 
         this.name = name
-        const doc = Automerge.init<S>() 
-        if (doc === undefined) {
-            throw new Error("undefined doc")
-        }
-        this.state = doc
         this.reducer = reducer
         this.started = false
         this.community = getAppCommunity()
@@ -60,9 +55,11 @@ export class Database<S,A> extends EventEmitter  {
             resolve(key.toDid())
         })
 
-        return this._did
+        return this._did       
+    }
 
-       
+    get state() {
+        return this._state!
     }
 
     async create(adminKey:EcdsaKey) {
@@ -71,7 +68,18 @@ export class Database<S,A> extends EventEmitter  {
         const tree = await ChainTree.newEmptyTree(c.blockservice, key)
 
         const adminAddress = await adminKey.address()
+        
+        this.initializeState(adminAddress)
+
         return c.playTransactions(tree, [setOwnershipTransaction([adminAddress])])
+    }
+
+    private initializeState(actorID:string) {
+        const doc = Automerge.init<S>(actorID) 
+        if (doc === undefined) {
+            throw new Error("undefined doc")
+        }
+        this._state = doc
     }
 
     async allowWriters(adminKey:EcdsaKey, dids:string[]) {
@@ -100,26 +108,36 @@ export class Database<S,A> extends EventEmitter  {
         if (!this.userTree) {
             throw new Error("you cannot write to a decentralized db without a userTree")
         }
-        const oldDoc = this.state
-        this.state = Automerge.change(this.state, (state:S)=> {
+        if (!this._state) {
+            throw new Error("you must have a state to dispatch")
+        }
+        const oldDoc = this._state
+        this._state = Automerge.change(this._state, (state:S)=> {
             this.reducer(state, action)
         })
 
-        const changes = Automerge.getChanges(oldDoc, this.state)
+        const changes = Automerge.getChanges(oldDoc, this._state)
         this.publishChanges(changes)
         this.updateChainTree(changes)        
     }
 
     start(userTree:ChainTree) {
         if (!this.started) {
-            this.userTree = userTree
-            this.started = true
-            return this.listen()
+            return new Promise(async (resolve) => {
+                this.initializeState((await userTree.id())!)
+                this.userTree = userTree
+                this.started = true
+                resolve(this.listen())
+            })
         }
         return Promise.resolve()
     }
 
     private async getInitialState() {
+        if (!this._state) {
+            throw new Error("you must have an initial state")
+        }
+
         log("getting initial state")
         const c = await this.community
 
@@ -156,9 +174,9 @@ export class Database<S,A> extends EventEmitter  {
             })
             log("getting writer: ", did)
             const resp = await writerTree.resolveData(dbDid + "/latest")
-            const latest = Automerge.load(resp.value)
-            const newDoc = Automerge.merge(this.state, latest) as Automerge.FreezeObject<S>
-            this.state = newDoc
+            const latest = Automerge.load(resp.value, did)
+            const newDoc = Automerge.merge(this._state, latest) as Automerge.FreezeObject<S>
+            this._state = newDoc
         }
         this.emit('initialSync')
         log("initial sync finished")
@@ -174,13 +192,16 @@ export class Database<S,A> extends EventEmitter  {
         log("subscribing to ", did)
 
         await c.node.pubsub.subscribe(did, (msg:any) => {
+            if (!this._state) {
+                throw new Error("you must have a state to apply changes to")
+            }
             let decoded = dagCBOR.util.deserialize(Buffer.from(msg.data))
             log("msg: ", msg, "decoded: ", decoded)
 
             switch (decoded.type) {
                 case MessageType.change:
                     log("applying change")
-                    this.state = Automerge.applyChanges(this.state, decoded.updates)
+                    this._state = Automerge.applyChanges(this._state, decoded.updates)
                     break
                 default:
                     console.error("unknown messsage type: ", decoded.type)
@@ -221,11 +242,14 @@ export class Database<S,A> extends EventEmitter  {
         if (!this.userTree) {
             throw new Error("you cannot update a userTree without a userTree")
         }
+        if (!this._state) {
+            throw new Error("you must have a state")
+        }
 
         const c = await getAppCommunity()
         const did = await this.did()
 
-        const currentState = Automerge.save(this.state)
+        const currentState = Automerge.save(this._state)
 
         await c.playTransactions(this.userTree, [setDataTransaction(did + "/latest", currentState)])
         log("chaintree updated")
