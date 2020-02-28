@@ -4,8 +4,6 @@ import { EventEmitter } from "events";
 
 const log = debug("identity")
 
-const userNamespace = Buffer.from("decentratweetUsers")
-
 /**
  * The path within the user ChainTree where decentratweet stores the username
  */
@@ -15,9 +13,11 @@ export const usernamePath = "tupelo.me/username"
  * Generates a public/private keypair from an *insecure* passphrase (username).
  * The generated ChainTree will have a known name derived from the username
  * argument. The very first thing you do with the ChainTree should be to
- * ChangeOwner @param username - the username
+ * ChangeOwner 
+ * @param username - the username
+ * @param userNamespace - a namespace to drop the users into (a user is globally unique to their username/userNamespace combination eg: tobowers/clownfahrt.de is different than tobowers/differentNamespace.whatever)
  */
-const insecureUsernameKey = async (username: string) => {
+const insecureUsernameKey = async (username: string, userNamespace:Uint8Array) => {
     return EcdsaKey.passPhraseKey(Buffer.from(username), userNamespace)
 }
 
@@ -41,9 +41,9 @@ const didFromKey = async (key: EcdsaKey) => {
  * Looks up the user account chaintree for the given username, returning it if
  * it exists.
  */
-export const findUserAccount = async (username: string) => {
+export const findUserAccount = async (username: string, userNamespace:Uint8Array) => {
     const c = await Community.getDefault()
-    const insecureKey = await insecureUsernameKey(username)
+    const insecureKey = await insecureUsernameKey(username, userNamespace)
     const did = await didFromKey(insecureKey)
 
     let tip
@@ -115,11 +115,11 @@ export const fromDidAndKeyString = async (did: string, keyString: string) => {
  *
  * Returns a handle for the created * chaintree
  */
-export const register = async (username: string, password: string) => {
+export const register = async (username: string, password: string, userNamespace:Uint8Array) => {
     log("register")
     const c = await Community.getDefault()
     log('creating key')
-    const insecureKey = await insecureUsernameKey(username)
+    const insecureKey = await insecureUsernameKey(username, userNamespace)
     const secureKey = await securePasswordKey(username, password)
     const secureKeyAddress = await secureKey.address()
 
@@ -163,8 +163,8 @@ export class User extends EventEmitter {
     userName: string
 
     //TODO: error handling
-    static async find(userName: string, community: Community) {
-        const tree = await findUserAccount(userName)
+    static async find(userName: string, userNamespace:Uint8Array, community: Community) {
+        const tree = await findUserAccount(userName, userNamespace)
         if (!tree) {
             throw new Error("no tree found")
         }
@@ -180,6 +180,7 @@ export class User extends EventEmitter {
 
     async load() {
         await this.setDid()
+        return this
     }
 
     private async setDid():Promise<string> {

@@ -1,4 +1,4 @@
-import {Community, Tupelo, EcdsaKey, ChainTree, setDataTransaction} from 'tupelo-wasm-sdk'
+import {Community, EcdsaKey, ChainTree, setDataTransaction} from 'tupelo-wasm-sdk'
 import debug from 'debug'
 
 const isNode = require('is-node')
@@ -11,17 +11,14 @@ declare const window:any;
 declare const Go:any;
 if (!isNode) {
     window.Community = Community
-}
-
-// if (window) {
-//     const subDirectory = window.location.pathname
-//     log("subDirectory ", subDirectory)
+    const subDirectory = window.location.pathname
+    log("subDirectory ", subDirectory)
   
-//     if (subDirectory !== '/') {
-//       log("setting wasmpath to: ", subDirectory + "tupelo.wasm")
-//       Go.setWasmPath(subDirectory + "tupelo.wasm");
-//     }
-//   }
+    if (subDirectory !== '/') {
+      log("setting wasmpath to: ", subDirectory + "tupelo.wasm")
+      Go.setWasmPath(subDirectory + "tupelo.wasm");
+    }
+}
 
 const devCommunityConfig = `
 id = "tupelolocal"
