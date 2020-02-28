@@ -1,6 +1,7 @@
 import { debug } from "debug";
 import { ChainTree, EcdsaKey, setDataTransaction, setOwnershipTransaction, Tupelo, Community } from "tupelo-wasm-sdk";
 import { EventEmitter } from "events";
+import {getAppCommunity} from './community';
 
 const log = debug("identity")
 
@@ -41,25 +42,27 @@ const didFromKey = async (key: EcdsaKey) => {
  * Looks up the user account chaintree for the given username, returning it if
  * it exists.
  */
-export const findUserAccount = async (username: string, userNamespace:Uint8Array) => {
-    const c = await Community.getDefault()
+export const findUserAccount = async (username: string, userNamespace:Uint8Array):Promise<ChainTree|undefined> => {
+    const community = await getAppCommunity()
+
     const insecureKey = await insecureUsernameKey(username, userNamespace)
     const did = await didFromKey(insecureKey)
 
     let tip
-    let tree: ChainTree | undefined = undefined
+    let tree:ChainTree|undefined = undefined
 
     try {
-        tip = await c.getTip(did)
+        tip = await community.getTip(did)
     } catch (e) {
         if (e === "not found") {
             // do nothing, let tip be null
+            return undefined
         }
     }
 
     if (tip !== undefined) {
         tree = new ChainTree({
-            store: c.blockservice,
+            store: community.blockservice,
             tip: tip,
         })
     }
@@ -71,40 +74,25 @@ export const findUserAccount = async (username: string, userNamespace:Uint8Array
  * Verifies that the secure password key generated with the provided username
  * and password matches one of the owner keys for the provided chaintree.
  */
-export const verifyAccount = async (username: string, password: string, userTree: ChainTree): Promise<[boolean, User?]> => {
+export const verifyAccount = async (username: string, password: string, userNamespace:Uint8Array): Promise<[boolean, User?]> => {
     let secureKey = await securePasswordKey(username, password)
     let secureAddr = await secureKey.address()
-    let resolveResp = await userTree.resolve("tree/_tupelo/authentications")
-    let auths: string[] = resolveResp.value
-    if (auths.includes(secureAddr)) {
-        userTree.key = secureKey
+    const community = await getAppCommunity()
 
-        return [true, new User(username, userTree, await Community.getDefault())]
-    } else {
+    const tree = await findUserAccount(username, userNamespace)
+    if (tree === undefined) {
         return [false, undefined]
     }
-}
 
-export const fromDidAndKeyString = async (did: string, keyString: string) => {
-    try {
-        const c = await Community.getDefault()
-        let tip
-        tip = await c.getTip(did)
-
-        const key = await EcdsaKey.fromBytes(Buffer.from(keyString, 'base64'))
-
-        const tree = new ChainTree({
-            key: key,
-            tip: tip,
-            store: c.blockservice,
-        })
-
-        const username = (await tree.resolveData(usernamePath)).value
-        
-        const user = new User(username, tree, c)
-        return user
-    } catch (e) {
-        throw e
+    let resolveResp = await tree.resolve("tree/_tupelo/authentications")
+    let auths: string[] = resolveResp.value
+    if (auths.includes(secureAddr)) {
+        tree.key = secureKey
+        const user = new User(username, tree, community)
+        await user.load()
+        return [true, user]
+    } else {
+        return [false, undefined]
     }
 }
 
@@ -117,7 +105,7 @@ export const fromDidAndKeyString = async (did: string, keyString: string) => {
  */
 export const register = async (username: string, password: string, userNamespace:Uint8Array) => {
     log("register")
-    const c = await Community.getDefault()
+    const c = await getAppCommunity()
     log('creating key')
     const insecureKey = await insecureUsernameKey(username, userNamespace)
     const secureKey = await securePasswordKey(username, password)
@@ -163,7 +151,7 @@ export class User extends EventEmitter {
     userName: string
 
     //TODO: error handling
-    static async find(userName: string, userNamespace:Uint8Array, community: Community) {
+    static async find(userName: string, userNamespace:Uint8Array, community: Community, ) {
         const tree = await findUserAccount(userName, userNamespace)
         if (!tree) {
             throw new Error("no tree found")

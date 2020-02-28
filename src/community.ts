@@ -3,22 +3,22 @@ import debug from 'debug'
 
 const isNode = require('is-node')
 
-const log = debug("util.community")
+const log = debug("community")
 
 let _appCommunityPromise: Promise<Community>
 
 declare const window:any;
 declare const Go:any;
-if (!isNode) {
-    window.Community = Community
-    const subDirectory = window.location.pathname
-    log("subDirectory ", subDirectory)
+// if (!isNode) {
+//     window.Community = Community
+//     const subDirectory = window.location.pathname
+//     log("subDirectory ", subDirectory)
   
-    if (subDirectory !== '/') {
-      log("setting wasmpath to: ", subDirectory + "tupelo.wasm")
-      Go.setWasmPath(subDirectory + "tupelo.wasm");
-    }
-}
+//     if (subDirectory !== '/') {
+//       log("setting wasmpath to: ", subDirectory + "/tupelo.wasm")
+//       Go.setWasmPath(subDirectory + "/tupelo.wasm");
+//     }
+// }
 
 const devCommunityConfig = `
 id = "tupelolocal"
@@ -52,7 +52,7 @@ export function getAppCommunity(): Promise<Community> {
                 c = await Community.getDefault()
                 break;
             default:
-                log("using development community")
+                log("using development community and wasm at: ", Go.wasmpath)
                 c = await Community.fromNotaryGroupToml(devCommunityConfig)
                 Community.setDefault(c)
                 // in dev we want to actually do a transaction in order to make sure that Community has some state
