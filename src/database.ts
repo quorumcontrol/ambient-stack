@@ -175,9 +175,11 @@ export class Database<S,A> extends EventEmitter  {
             })
             log("getting writer: ", did)
             const resp = await writerTree.resolveData(dbDid + "/latest")
-            const latest = Automerge.load(resp.value, did)
-            const newDoc = Automerge.merge(this._state, latest) as Automerge.FreezeObject<S>
-            this._state = newDoc
+            if (resp && resp.value) {
+                const latest = Automerge.load(resp.value, did)
+                const newDoc = Automerge.merge(this._state, latest) as Automerge.FreezeObject<S>
+                this._state = newDoc
+            }
         }
         this.emit('initialSync')
         log("initial sync finished")

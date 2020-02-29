@@ -1,7 +1,7 @@
 import React, { useState, ChangeEvent, useEffect } from 'react';
 import { Box, Heading, Text, Form, FormField, TextArea } from 'grommet';
 import { useAmbientUser, getIcon } from '../util/user';
-import { useDecentralizedDatabase } from '../util/usedatabase';
+import { useAmbientDatabase } from '../util/usedatabase';
 
 import { Previous, Next } from 'grommet-icons';
 import { StandupReport, StandupProps } from '../components/standupreport';
@@ -28,34 +28,34 @@ export function Home() {
 
     const [standup, setStandup] = useState({} as StandupProps)
 
-    const [dispatch, db] = useDecentralizedDatabase<DailyState,StandupProps>("demo.2020-01-28", reducer)
+    // const [dispatch, db] = useAmbientDatabase<DailyState,StandupProps>("demo.2020-01-28", reducer)
 
     const onChange = (evt:ChangeEvent<HTMLTextAreaElement|HTMLInputElement>) => {
         const newState = {...standup, [evt.target.name]: evt.target.value}
-        setStandup(newState)
-        dispatch(newState)
+        // setStandup(newState)
+        // dispatch(newState)
     }
 
-    useEffect(()=> {
-        if (user) {
-            setStandup({...standup, name: user.userName})
-        }
-    }, [user])
+    // useEffect(()=> {
+    //     if (user) {
+    //         setStandup({...standup, name: user.userName})
+    //     }
+    // }, [user, standup])
 
     let todaysStandups:JSX.Element[] = []
 
-    if (db.standups) {
-        todaysStandups = Object.entries(db.standups).map(([_, value], i) => {
-            return (<StandupReport
-                key={i}
-                today={value.today}
-                yesterday={value.yesterday}
-                blockers={value.blockers}
-                name={value.name}
-                />
-            )
-        });
-    }
+    // if (db.standups) {
+    //     todaysStandups = Object.entries(db.standups).map(([_, value], i) => {
+    //         return (<StandupReport
+    //             key={i}
+    //             today={value.today}
+    //             yesterday={value.yesterday}
+    //             blockers={value.blockers}
+    //             name={value.name}
+    //             />
+    //         )
+    //     });
+    // }
 
     
     
@@ -75,7 +75,7 @@ export function Home() {
 
                             <Form>
                                 {/* <FormField type="text" name="name" label="name" value={standup.name} onChange={onChange}/> */}
-
+                                <p>{user?.userName}</p>
                                 <FormField type="text" label="Plan for today?">
                                     <TextArea name="today" value={standup.today} onChange={onChange}/>
                                 </FormField>
@@ -93,9 +93,9 @@ export function Home() {
                     </Box>
                     <Box pad="medium" align="center" alignSelf="center" basis="small">
                         <Box width="120px" height="120px" round="full" overflow="hidden" align="center" alignContent="center">
-                            {getIcon(standup.name)}
+                            {/* {getIcon(user!.userName)} */}
                         </Box>
-                        <Text>{standup.name}</Text>
+                        {/* <Text>{user!.userName}</Text> */}
                     </Box>
                 </Box>
 

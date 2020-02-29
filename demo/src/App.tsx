@@ -8,10 +8,9 @@ import {
 } from "react-router-dom";
 import { Login } from './pages/login';
 import { Home } from './pages/home';
-import { SSO } from './pages/sso';
 import { useAmbientUser } from './util/user';
-import { SSOReturnPage } from './pages/ssoreturn';
 import { PulseLoader } from 'react-spinners';
+import { Teams } from './pages/teams';
 
 const theme = {
   global: {
@@ -66,13 +65,10 @@ const App: React.FC = () => {
           <Route path="/login">
             <Login />
           </Route>
-          <Route path="/sso">
-            <SSO />
-          </Route>
-          <Route path="/ssoreturn">
-            <SSOReturnPage />
-          </Route>
           <AuthenticatedRoute path="/">
+            <Teams />
+          </AuthenticatedRoute>
+          <AuthenticatedRoute path="/teams/:id">
             <Home />
           </AuthenticatedRoute>
         </Switch>
