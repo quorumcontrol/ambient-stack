@@ -1,27 +1,10 @@
 import {useState, useEffect} from 'react'
 import {FreezeObject} from 'automerge'
-import { Database, Reducer, getAppCommunity, User } from 'ambient-stack';
-import {  StandupProps } from '../components/standupreport';
+import { Database, Reducer, getAppCommunity } from 'ambient-stack';
 import { useAmbientUser } from './user';
 import debug from 'debug'
 
 const log = debug("util.usedatabase")
-
-
-export interface DailyState {
-    standups: {[key: string]: StandupProps} 
-}
-
-export const DailyStateReducer = (doc: DailyState, standup: StandupProps) => {
-    if (doc.standups === undefined) {
-        doc.standups = {}
-    }
-    if (standup.today === undefined || standup.today === "") {
-        delete doc.standups[standup.name]
-        return
-    }
-    doc.standups[standup.name] = standup
-}
 
 
 export function useAmbientDatabase<S,A>(name:string, reducer:Reducer<S,A>, initialState?:S):[(action:A)=>void, S] {
@@ -46,10 +29,12 @@ export function useAmbientDatabase<S,A>(name:string, reducer:Reducer<S,A>, initi
     setDb(newDb)
 
     newDb.on('update', ()=> {
+        log('updating state')
         setState(newDb.state)
     })
 
     newDb.once('initialSync', ()=> {
+        log('initial sync')
         setState(newDb.state)
     })
 

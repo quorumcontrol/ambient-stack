@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { User, getAppCommunity, verifyAccount, register, Database} from 'ambient-stack';
-import { ChainTree, EcdsaKey, Repo } from 'tupelo-wasm-sdk';
+import { EcdsaKey, Repo } from 'tupelo-wasm-sdk';
 import debug from 'debug';
 
 import woman from '../images/woman.jpg'
@@ -9,8 +9,6 @@ import carol from '../images/carol.jpg'
 import { User as UserIcon } from 'grommet-icons';
 import { Image } from 'grommet';
 
-import {DailyState, DailyStateReducer} from '../util/usedatabase'
-import {StandupProps} from '../components/standupreport'
 import { UserTeamsState, UserTeamsReducer, UserTeamsStateUpdateEvt} from './teamdb';
 
 const log = debug("util.user")
