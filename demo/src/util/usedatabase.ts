@@ -3,6 +3,9 @@ import {FreezeObject} from 'automerge'
 import { Database, Reducer, getAppCommunity, User } from 'ambient-stack';
 import {  StandupProps } from '../components/standupreport';
 import { useAmbientUser } from './user';
+import debug from 'debug'
+
+const log = debug("util.usedatabase")
 
 
 export interface DailyState {
@@ -21,7 +24,7 @@ export const DailyStateReducer = (doc: DailyState, standup: StandupProps) => {
 }
 
 
-export function useAmbientDatabase<S,A>(name:string, reducer:Reducer<S,A>):[(action:A)=>void, S] {
+export function useAmbientDatabase<S,A>(name:string, reducer:Reducer<S,A>, initialState?:S):[(action:A)=>void, S] {
     const {user} = useAmbientUser()
 
     getAppCommunity() // just to make sure it gets setup
@@ -38,11 +41,15 @@ export function useAmbientDatabase<S,A>(name:string, reducer:Reducer<S,A>):[(act
     if (db !== undefined) {
         return [db.dispatch.bind(db), state as S]
     }
-    const newDb = new Database<S,A>(name, reducer)
+    const newDb = new Database<S,A>(name, reducer, initialState)
     setState(newDb.state)
     setDb(newDb)
 
     newDb.on('update', ()=> {
+        setState(newDb.state)
+    })
+
+    newDb.once('initialSync', ()=> {
         setState(newDb.state)
     })
 

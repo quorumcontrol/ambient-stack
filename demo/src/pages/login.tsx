@@ -4,6 +4,9 @@ import { Box, Heading, Form, FormField, Button } from 'grommet';
 import { PulseLoader } from 'react-spinners';
 import { useUserRepo, login, signup } from '../util/user';
 import { Redirect } from "react-router";
+import debug from 'debug'
+
+const log = debug("pages.login")
 
 export function Login() {
     const [state, setState] = useState({loading:true} as { 
@@ -42,7 +45,7 @@ export function Login() {
             return
         }
 
-        console.log("login pushed: ", state.username)
+        log("login pushed: ", state.username)
         const [found] = await login(state.username, state.password, repo)
         if (!found) {
             setState((state)=> {return {...state, loading: false, error: "user not found" }})
@@ -66,6 +69,7 @@ export function Login() {
         }
 
         await signup(state.username,state.password,repo)
+        log("signed up")
         setState((state)=> {return {...state, loading: false, success:true}})
     }
 

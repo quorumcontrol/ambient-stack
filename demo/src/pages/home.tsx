@@ -1,39 +1,29 @@
 import React, { useState, ChangeEvent, useEffect } from 'react';
 import { Box, Heading, Text, Form, FormField, TextArea } from 'grommet';
 import { useAmbientUser, getIcon } from '../util/user';
-import { useAmbientDatabase } from '../util/usedatabase';
+import { useAmbientDatabase, DailyState, DailyStateReducer } from '../util/usedatabase';
 
 import { Previous, Next } from 'grommet-icons';
 import { StandupReport, StandupProps } from '../components/standupreport';
+import { useParams } from 'react-router';
+import debug from 'debug'
 
+const log = debug("pages.home")
 
-interface DailyState {
-    standups: {[key: string]: StandupProps} 
-}
-
-const reducer = (doc: DailyState, standup: StandupProps) => {
-    if (doc.standups === undefined) {
-        doc.standups = {}
-    }
-    if (standup.today === undefined || standup.today === "") {
-        delete doc.standups[standup.name]
-        return
-    }
-    doc.standups[standup.name] = standup
-}
 
 export function Home() {
-
+    let { teamName } = useParams();
     const {user} = useAmbientUser()
-
     const [standup, setStandup] = useState({} as StandupProps)
 
-    // const [dispatch, db] = useAmbientDatabase<DailyState,StandupProps>("demo.2020-01-28", reducer)
+    log("teamName: ", teamName)
+
+    const [dispatch, db] = useAmbientDatabase<DailyState,StandupProps>(teamName!, DailyStateReducer, {standups:{}})
 
     const onChange = (evt:ChangeEvent<HTMLTextAreaElement|HTMLInputElement>) => {
         const newState = {...standup, [evt.target.name]: evt.target.value}
-        // setStandup(newState)
-        // dispatch(newState)
+        setStandup(newState)
+        dispatch(newState)
     }
 
     // useEffect(()=> {
@@ -44,21 +34,18 @@ export function Home() {
 
     let todaysStandups:JSX.Element[] = []
 
-    // if (db.standups) {
-    //     todaysStandups = Object.entries(db.standups).map(([_, value], i) => {
-    //         return (<StandupReport
-    //             key={i}
-    //             today={value.today}
-    //             yesterday={value.yesterday}
-    //             blockers={value.blockers}
-    //             name={value.name}
-    //             />
-    //         )
-    //     });
-    // }
-
-    
-    
+    if (db.standups) {
+        todaysStandups = Object.entries(db.standups).map(([_, value], i) => {
+            return (<StandupReport
+                key={i}
+                today={value.today}
+                yesterday={value.yesterday}
+                blockers={value.blockers}
+                name={value.name}
+                />
+            )
+        });
+    }
 
     return (
         <Box fill align="center" justify="center">
@@ -71,11 +58,7 @@ export function Home() {
                     <Box elevation="small" pad="medium" basis="1/2">
                         <Heading size="small">Today</Heading>
                         <Box>
-
-
                             <Form>
-                                {/* <FormField type="text" name="name" label="name" value={standup.name} onChange={onChange}/> */}
-                                <p>{user?.userName}</p>
                                 <FormField type="text" label="Plan for today?">
                                     <TextArea name="today" value={standup.today} onChange={onChange}/>
                                 </FormField>
@@ -93,9 +76,9 @@ export function Home() {
                     </Box>
                     <Box pad="medium" align="center" alignSelf="center" basis="small">
                         <Box width="120px" height="120px" round="full" overflow="hidden" align="center" alignContent="center">
-                            {/* {getIcon(user!.userName)} */}
+                            {getIcon(user!.userName)}
                         </Box>
-                        {/* <Text>{user!.userName}</Text> */}
+                        <Text>{user!.userName}</Text>
                     </Box>
                 </Box>
 
@@ -108,12 +91,12 @@ export function Home() {
                     <Box basis="small" alignSelf="center">
                         <Previous size="medium" />
                     </Box>
-
+{/* 
                     <StandupReport 
                         name="Carol"
                         today={`Beard copper mug biodiesel, chillwave pork belly quinoa +1. Enamel pin vinyl sriracha forage. Tbh mumblecore cronut yr skateboard. Hot chicken pickled ugh tousled gluten-free.`}
                         yesterday={`Tattooed raclette chicharrones occupy enamel pin coloring book neutra etsy disrupt woke copper mug portland. Slow-carb squid enamel pin, four loko 8-bit intelligentsia small batch keytar shabby chic fingerstache jean short`}
-                    />
+                    /> */}
 
                     {todaysStandups}
                     

@@ -11,6 +11,7 @@ import { Image } from 'grommet';
 
 import {DailyState, DailyStateReducer} from '../util/usedatabase'
 import {StandupProps} from '../components/standupreport'
+import { UserTeamsState, UserTeamsReducer, UserTeamsStateUpdateEvt} from './teamdb';
 
 const log = debug("util.user")
 
@@ -63,7 +64,7 @@ export async function signup(username:string,password:string,repo:Repo):Promise<
 
     log('setting up teams database')
     // setup their teams database
-    const db = new Database<DailyState,StandupProps>(username + "-teams", DailyStateReducer)
+    const db = new Database<UserTeamsState,UserTeamsStateUpdateEvt>(username + "-teams", UserTeamsReducer, {teams:[]})
     await db.create(user.tree.key!)
 
     const did = await user.tree.id()

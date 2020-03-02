@@ -65,11 +65,11 @@ const App: React.FC = () => {
           <Route path="/login">
             <Login />
           </Route>
+          <AuthenticatedRoute path="/teams/:teamName">
+            <Home />
+          </AuthenticatedRoute>
           <AuthenticatedRoute path="/">
             <Teams />
-          </AuthenticatedRoute>
-          <AuthenticatedRoute path="/teams/:id">
-            <Home />
           </AuthenticatedRoute>
         </Switch>
 
