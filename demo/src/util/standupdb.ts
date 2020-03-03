@@ -1,10 +1,5 @@
 import { StandupProps } from "../components/standupreport"
 
-export const defaultState: DailyState = {
-    standups: {},
-    users: [],
-}
-
 enum actions {
     ADD,
     ADD_USER

@@ -5,7 +5,7 @@ import { useAmbientDatabase, } from '../util/usedatabase';
 import { Previous, Next } from 'grommet-icons';
 import { StandupReport, StandupProps } from '../components/standupreport';
 import { useParams } from 'react-router';
-import { defaultState, DailyState, DailyStateReducer, DailyAction, addStandupAction, addUserAction } from '../util/standupdb';
+import { DailyState, DailyStateReducer, DailyAction, addStandupAction, addUserAction } from '../util/standupdb';
 import { Database, findUserAccount } from 'ambient-stack';
 import debug from 'debug'
 import { PulseLoader } from 'react-spinners';

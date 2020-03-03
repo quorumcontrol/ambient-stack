@@ -1,5 +1,4 @@
 import React, { useState, FormEvent, ChangeEvent, useEffect} from 'react';
-import { useHistory } from 'react-router';
 import { Box, Heading, Form, FormField, Button } from 'grommet';
 import { PulseLoader } from 'react-spinners';
 import { useUserRepo, login, signup } from '../util/user';
@@ -16,7 +15,6 @@ export function Login() {
         error: string,
         success: boolean,
     })
-    const history = useHistory()
 
     const {repo,loading} = useUserRepo()
 
