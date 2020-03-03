@@ -87,12 +87,10 @@ export function Home() {
             log("initial sync on home page")
             setStandup((st) => { 
                 const newState = {...st}
-                const dbStandup = db.state?.standups[user!.userName]
+                const dbStandup = db.state?.standups[user!.userName] || {}
                 log("dbStandup: ", dbStandup)
                 for (let key of ["today", "yesterday", "blockers"]) {
-                    console.log(`reflect ${key}: ${Reflect.get(st, key)}`)
-                    if (!Reflect.get(st, key)) {
-                        console.log(`setting ${key} to: `, Reflect.get(dbStandup, key))
+                    if (!Reflect.get(newState, key)) {
                         Reflect.set(newState, key, Reflect.get(dbStandup, key))
                     }
                 }

@@ -1,4 +1,7 @@
 import { StandupProps } from "../components/standupreport"
+import debug from 'debug'
+
+const log = debug('util.standupdb')
 
 enum actions {
     ADD,
@@ -37,25 +40,33 @@ export function addUserAction(userName: string) {
 }
 
 export const DailyStateReducer = (doc: DailyState, action: DailyAction) => {
-    if (doc.standups === undefined) {
-        doc.standups = {}
-    }
-
     switch (action.type) {
         case actions.ADD:
+            if (doc.standups === undefined) {
+                doc.standups = {}
+            }
             const standup = action.standup
+
             if (standup.today === undefined || standup.today === "") {
                 delete doc.standups[standup.name]
                 return
             }
+
+            for (let key of Object.keys(standup)) {
+                if (!Reflect.get(standup,key)) {
+                    Reflect.set(standup, key, "")
+                }
+            }
+            log("standup: ", standup)
+
             let existing = doc.standups[standup.name]
             if (!existing) {
                 doc.standups[standup.name] = standup
                 return
             }
             existing.today = standup.today
-            existing.yesterday = standup.yesterday ? standup.yesterday : ""
-            existing.blockers = standup.blockers ? standup.blockers : ""
+            existing.yesterday = standup.yesterday
+            existing.blockers = standup.blockers
 
             break;
         case actions.ADD_USER:

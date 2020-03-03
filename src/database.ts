@@ -264,8 +264,6 @@ export class Database<S, A> extends EventEmitter {
         try {
             tip = await c.getTip(writerDid)
         } catch (e) {
-            // log(e)
-            // console.log("e: ", e.name, "msg: ", e.message)
             if (!e.toString().includes("not found")) {
                 console.error("tip error: ", e)
             }
