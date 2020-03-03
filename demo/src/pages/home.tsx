@@ -67,8 +67,6 @@ export function Home() {
     const { user } = useAmbientUser()
     const [standup, setStandup] = useState({} as StandupProps)
 
-    log("teamName: ", teamName)
-
     const [dispatch, dbState, db] = useAmbientDatabase<DailyState, DailyAction>(teamName!, DailyStateReducer)
 
     const onChange = (evt: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {

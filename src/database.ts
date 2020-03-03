@@ -47,11 +47,12 @@ export class Database<S, A> extends EventEmitter {
     userTree?: ChainTree
     initiallyLoaded: boolean
     fullyLoaded: boolean
-
-    private _did?: Promise<string>
     private community: Promise<Community>
-    private syncher: SimpleSyncher
+    private _did?: Promise<string>
     private dbTree?: ChainTree
+    private chainTreeSyncer: SimpleSyncher
+    private publishSyncer: SimpleSyncher
+    private lastPublished?: Automerge.FreezeObject<S>
 
     constructor(name: string, reducer: Reducer<S, A>) {
         super()
@@ -64,7 +65,8 @@ export class Database<S, A> extends EventEmitter {
         this.initiallyLoaded = false
         this.fullyLoaded = false
 
-        this.syncher = new SimpleSyncher("chaintree-updates", { onlyOne: true })
+        this.chainTreeSyncer = new SimpleSyncher("chaintree-updates", { onlyOne: true })
+        this.publishSyncer = new SimpleSyncher("publish-updates", { onlyOne: true })
     }
 
     did(): Promise<string> {
@@ -174,14 +176,17 @@ export class Database<S, A> extends EventEmitter {
         if (!this._state) {
             throw new Error("you must have a state to dispatch")
         }
-        const oldDoc = this._state
+        if (!this.lastPublished) {
+            this.lastPublished = this._state
+        }
+
         this._state = Automerge.change(this._state, (state: S) => {
             this.reducer(state, action)
         })
+        this.emit('update')
 
-        const changes = Automerge.getChanges(oldDoc, this._state)
-        this.publishChanges(changes)
-        this.updateChainTree(changes)
+        this.publishChanges()
+        this.updateChainTree()
     }
 
     start(userTree: ChainTree) {
@@ -195,19 +200,6 @@ export class Database<S, A> extends EventEmitter {
         }
         return Promise.resolve()
     }
-
-    // private initializeState(actorID?: string) {
-    //     let doc: Automerge.FreezeObject<S>
-    //     if (this.initialState) {
-    //         doc = Automerge.from(this.initialState, actorID)
-    //     } else {
-    //         doc = Automerge.init<S>(actorID)
-    //     }
-    //     if (doc === undefined) {
-    //         throw new Error("undefined doc")
-    //     }
-    //     this._state = doc
-    // }
 
     private async fetchDbTree() {
         const c = await this.community
@@ -356,8 +348,8 @@ export class Database<S, A> extends EventEmitter {
     // TODO: this needs to be serialized and done one at a time
     // and it should only happen every few seconds not on every change
     // also consider storing the actual changes outside of the chaintree - maybe sia?
-    private updateChainTree(changes: Automerge.Change[]) {
-        this.syncher.send(async () => {
+    private updateChainTree() {
+        this.chainTreeSyncer.send(async () => {
             if (!this.userTree) {
                 throw new Error("you cannot update a userTree without a userTree")
             }
@@ -368,28 +360,43 @@ export class Database<S, A> extends EventEmitter {
             const c = await getAppCommunity()
             const did = await this.did()
 
-            const currentState = Automerge.save(this._state)
+            const snapshot = this._state
+            const currentState = Automerge.save(snapshot)
 
             await c.playTransactions(this.userTree, [setDataTransaction(did + "/latest", currentState)])
             log("chaintree updated")
-            this.emit('sync', changes)
+            this.emit('sync', snapshot)
         })
-
     }
 
-    private async publishChanges(changes: Automerge.Change[]) {
-        const c = await getAppCommunity()
-        const did = await this.did()
-        this.emit('update', changes)
-        log("publishing: ", did)
+    private async publishChanges() {
+        this.publishSyncer.send(async ()=> {
+            if (!this._state || !this.lastPublished) {
+                throw new Error("must have a last published and state to publish changes")
+            }
+            const c = await getAppCommunity()
+            const did = await this.did()
+            const snapshot = this._state
 
-        const doc = {
-            type: MessageType.change,
-            updates: changes,
-        } as ChangeDoc
+            const changes = Automerge.getChanges(this.lastPublished, snapshot)
 
-        c.node.pubsub.publish(did, dagCBOR.util.serialize(doc)).catch((err: Error) => {
-            console.error("error publishing: ", err)
+            log("publishing: ", did, " changes: ", changes)
+    
+            const doc = {
+                type: MessageType.change,
+                updates: changes,
+            } as ChangeDoc
+            // debounce this down to 100ms per send
+            return new Promise((resolve)=> {
+                c.node.pubsub.publish(did, dagCBOR.util.serialize(doc)).catch((err: Error) => {
+                    console.error("error publishing: ", err)
+                }).then(()=> {
+                    this.lastPublished = snapshot
+                }).finally(()=> {
+                    setTimeout(resolve, 100)
+                })
+            })
         })
+       
     }
 }

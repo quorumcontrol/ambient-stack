@@ -53,7 +53,15 @@ export const DailyStateReducer = (doc: DailyState, action: DailyAction) => {
                 delete doc.standups[standup.name]
                 return
             }
-            doc.standups[standup.name] = standup
+            let existing = doc.standups[standup.name]
+            if (!existing) {
+                doc.standups[standup.name] = standup
+                return
+            }
+            existing.today = standup.today
+            existing.yesterday = standup.yesterday ? standup.yesterday : ""
+            existing.blockers = standup.blockers ? standup.blockers : ""
+
             break;
         case actions.ADD_USER:
             doc.users.push(action.userName);
