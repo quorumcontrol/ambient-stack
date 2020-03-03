@@ -22,8 +22,9 @@ interface ChangeDoc {
     updates: any
 }
 
-interface createOpts {
-    writers?: string[]
+interface createOpts<S> {
+    writers?: string[],
+    initialState?: S
 }
 
 export type Reducer<S, A> = (state: S, action: A) => void
@@ -44,14 +45,15 @@ export class Database<S, A> extends EventEmitter {
     started: boolean
     peerCount: number
     userTree?: ChainTree
+    initiallyLoaded: boolean
+    fullyLoaded: boolean
 
     private _did?: Promise<string>
-    private initialState?: S
     private community: Promise<Community>
     private syncher: SimpleSyncher
     private dbTree?: ChainTree
 
-    constructor(name: string, reducer: Reducer<S, A>, initialState?: S) {
+    constructor(name: string, reducer: Reducer<S, A>) {
         super()
 
         this.name = name
@@ -59,10 +61,10 @@ export class Database<S, A> extends EventEmitter {
         this.started = false
         this.community = getAppCommunity()
         this.peerCount = 0
+        this.initiallyLoaded = false
+        this.fullyLoaded = false
 
-        this.initialState = initialState
         this.syncher = new SimpleSyncher("chaintree-updates", { onlyOne: true })
-        this.initializeState()
     }
 
     did(): Promise<string> {
@@ -81,19 +83,27 @@ export class Database<S, A> extends EventEmitter {
         return this._state!
     }
 
-    async create(adminKey: EcdsaKey, opts?: createOpts) {
+    async create(adminKey: EcdsaKey, opts?: createOpts<S>) {
         const c = await this.community
         const key = await EcdsaKey.passPhraseKey(Buffer.from(this.name), namespace)
         const tree = await ChainTree.newEmptyTree(c.blockservice, key)
 
         const adminAddress = await adminKey.address()
 
-        this.initializeState(adminAddress)
         this.dbTree = tree
         let txs = [setOwnershipTransaction([adminAddress])]
         if (opts && opts.writers) {
             txs = txs.concat(transactionsForWriters(opts.writers))
         }
+
+        let doc:Automerge.FreezeObject<S>
+        if (opts && opts.initialState) {
+            doc = Automerge.from(opts.initialState, (await tree.id())!)
+        } else {
+            doc = Automerge.from({} as S, (await tree.id())!)
+        }
+        const currentState = Automerge.save(doc)
+        txs.push(setDataTransaction("/latest", currentState))
 
         return c.playTransactions(tree, txs)
     }
@@ -179,7 +189,6 @@ export class Database<S, A> extends EventEmitter {
             this.started = true
 
             return new Promise(async (resolve) => {
-                this.initializeState((await userTree.id())!)
                 this.userTree = userTree
                 resolve(this.listen())
             })
@@ -187,25 +196,25 @@ export class Database<S, A> extends EventEmitter {
         return Promise.resolve()
     }
 
-    private initializeState(actorID?: string) {
-        let doc: Automerge.FreezeObject<S>
-        if (this.initialState) {
-            doc = Automerge.from(this.initialState, actorID)
-        } else {
-            doc = Automerge.init<S>(actorID)
-        }
-        if (doc === undefined) {
-            throw new Error("undefined doc")
-        }
-        this._state = doc
-    }
+    // private initializeState(actorID?: string) {
+    //     let doc: Automerge.FreezeObject<S>
+    //     if (this.initialState) {
+    //         doc = Automerge.from(this.initialState, actorID)
+    //     } else {
+    //         doc = Automerge.init<S>(actorID)
+    //     }
+    //     if (doc === undefined) {
+    //         throw new Error("undefined doc")
+    //     }
+    //     this._state = doc
+    // }
 
     private async fetchDbTree() {
         const c = await this.community
         const dbDid = await this.did()
         const dbTip = await c.getTip(dbDid)
 
-        log("getting initial state")
+        log("getting dbTree")
         const dbTree = new ChainTree({
             store: c.blockservice,
             tip: dbTip,
@@ -223,13 +232,16 @@ export class Database<S, A> extends EventEmitter {
         const userDid = await this.userTree.id()
         const dbTree = await this.fetchDbTree()
 
-        // we can always trust ourselves and Automerge doesn't like merging in ourselves over ourselves
-        // so first lets get our own state
+        const dbInitial = await dbTree.resolveData("/latest")
+        this._state = Automerge.load(dbInitial.value, dbDid)
 
+        // start with the users tree because it is most likely local
         const userStateResp = await this.userTree.resolveData(dbDid + "/latest")
         if (userStateResp.value) {
-            this._state = Automerge.load(userStateResp.value, userDid)
+            this.mergeWriterState(userStateResp.value, userDid!)
         }
+        this.initiallyLoaded = true
+        this.emit('initialLocalSync')
 
         // go through each writer (that is not user) and get their latest state and sync it to the automerge doc
         const resp = await dbTree.resolveData("/writers")
@@ -237,23 +249,24 @@ export class Database<S, A> extends EventEmitter {
         const writers = resp.value
         log("writers: ", writers)
         if (!writers || writers.length === 0) {
+            this.fullyLoaded = true
             this.emit('initialSync')
             return
         }
 
         // only merge in *other* writers (not the user)
-        const promises = Object.keys(writers).filter((did) => { return did != userDid }).map((did) => {
+        const promises = Object.keys(writers).filter((did) => { return did != userDid }).map(async (did) => {
             log("getting tip for writer: ", did)
-            return this.mergeWriterState(did, dbDid)
+            return this.mergeWriterState((await this.getWriterState(did, dbDid)), did)
         })
 
         await Promise.all(promises)
-
+        this.fullyLoaded = true
         this.emit('initialSync')
         log("initial sync finished")
     }
 
-    private async getWriterSate(writerDid: string, dbDid: string) {
+    private async getWriterState(writerDid: string, dbDid: string) {
         const c = await this.community
         let tip
         try {
@@ -275,13 +288,11 @@ export class Database<S, A> extends EventEmitter {
         return resp.value // can be undefined
     }
 
-    private async mergeWriterState(writerDid: string, dbDid: string) {
+    private mergeWriterState(state:string, writerDid: string) {
         if (!this._state) {
             throw new Error("you must have an initial state")
         }
 
-        const c = await this.community
-        let state = await this.getWriterSate(writerDid, dbDid)
         if (state) {
             const latest = Automerge.load(state, writerDid)
             const newDoc = Automerge.merge(this._state, latest) as Automerge.FreezeObject<S>

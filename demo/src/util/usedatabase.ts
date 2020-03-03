@@ -1,6 +1,6 @@
 import {useState, useEffect} from 'react'
 import {FreezeObject} from 'automerge'
-import { Database, Reducer, getAppCommunity } from 'ambient-stack';
+import { Database, Reducer } from 'ambient-stack';
 import { useAmbientUser } from './user';
 import debug from 'debug'
 
@@ -8,7 +8,7 @@ const log = debug("util.usedatabase")
 
 export type dispatcher<A> = (action:A)=>void
 
-export function useAmbientDatabase<S,A>(name:string, reducer:Reducer<S,A>, initialState?:S):[dispatcher<A>, S, Database<S,A>] {
+export function useAmbientDatabase<S,A>(name:string, reducer:Reducer<S,A>):[dispatcher<A>, S, Database<S,A>] {
     const {user} = useAmbientUser()
 
     const [db, setDb] = useState(undefined as undefined|Database<S,A>)
@@ -19,16 +19,20 @@ export function useAmbientDatabase<S,A>(name:string, reducer:Reducer<S,A>, initi
         }
     }, [user,db])
 
-
     if (db !== undefined) {
         return [db.dispatch.bind(db), state as S, db]
     }
-    const newDb = new Database<S,A>(name, reducer, initialState)
+    const newDb = new Database<S,A>(name, reducer)
     setState(newDb.state)
     setDb(newDb)
 
     newDb.on('update', ()=> {
         log('updating state: ', newDb.state)
+        setState(newDb.state)
+    })
+
+    newDb.once('initialLocalSync', ()=> {
+        log('initial local sync')
         setState(newDb.state)
     })
 

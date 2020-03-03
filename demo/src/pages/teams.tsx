@@ -1,13 +1,13 @@
 import React, { useState, ChangeEvent } from 'react'
 import { Box, Heading, Button, FormField, Form } from 'grommet'
 import { useAmbientUser, logout, useUserRepo } from '../util/user'
-import { Database, getAppCommunity } from 'ambient-stack'
+import { Database } from 'ambient-stack'
 import { useAmbientDatabase } from '../util/usedatabase'
 import { UserTeamsReducer, UserTeamsState, UserTeamsStateUpdateEvt, UserTeamsStateActions } from '../util/teamdb'
 import debug from 'debug'
 import { Link, useHistory } from 'react-router-dom'
-import { defaultState, DailyState, DailyStateReducer, DailyAction, addUserAction } from '../util/standupdb'
-import { ChainTree } from 'tupelo-wasm-sdk'
+import {  DailyState, DailyStateReducer, DailyAction } from '../util/standupdb'
+import { PulseLoader } from 'react-spinners'
 
 const log = debug("pages.teams")
 
@@ -15,7 +15,7 @@ export function Teams() {
     const [state, setState] = useState({ loading: false, teamName: "" })
     const { user } = useAmbientUser()
 
-    const [dispatch, teamState] = useAmbientDatabase<UserTeamsState, UserTeamsStateUpdateEvt>(user!.userName + "-app-settings", UserTeamsReducer, { teams: [] })
+    const [dispatch, teamState, db] = useAmbientDatabase<UserTeamsState, UserTeamsStateUpdateEvt>(user!.userName + "-app-settings", UserTeamsReducer)
     const {repo} = useUserRepo()
     const history = useHistory()
 
@@ -23,7 +23,7 @@ export function Teams() {
         if (!user) {
             throw new Error("must have a user")
         }
-        const db = new Database<DailyState, DailyAction>(state.teamName, DailyStateReducer, defaultState)
+        const db = new Database<DailyState, DailyAction>(state.teamName, DailyStateReducer)
 
         // first check to see if this db already exists
         const exists = await db.exists()
@@ -49,24 +49,18 @@ export function Teams() {
         } as UserTeamsStateUpdateEvt)
         log("creating standup database: ", state.teamName)
         const did = await user?.tree.id()
-        await db.create(user?.tree.key!, {writers:[did!]})
-        return new Promise((resolve)=> {
-            db.once('update', resolve)
-            db.dispatch(addUserAction(user?.userName))
+        return db.create(user?.tree.key!, {
+            writers:[did!],
+            initialState: {
+                users: [user.userName!],
+                standups: {},
+            }
         })
     }
 
     const onChange = (evt: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
         setState({ ...state, teamName: evt.target.value })
     }
-
-    log("user: ", user, " team state: ", teamState)
-
-    const teamLIs = teamState.teams ? teamState.teams.map((teamName: string, i: number) => {
-        return (
-            <li key={i}><Link to={"/teams/" + teamName}>{teamName}</Link></li>
-        )
-    }) : []
 
     const onLogout = async ()=> {
         if (!repo) {
@@ -76,6 +70,22 @@ export function Teams() {
         await logout(repo)
         history.push("/login")
     }
+
+    if (!db.initiallyLoaded) {
+        return (
+            <Box fill align="center" justify="center">
+                <PulseLoader />
+            </Box>
+        )
+    }
+
+    log("user: ", user, " team state: ", teamState)
+
+    const teamLIs = teamState.teams ? teamState.teams.map((teamName: string, i: number) => {
+        return (
+            <li key={i}><Link to={"/teams/" + teamName}>{teamName}</Link></li>
+        )
+    }) : []
 
     return (
         <Box fill align="center" justify="center">

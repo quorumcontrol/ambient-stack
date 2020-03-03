@@ -62,12 +62,14 @@ export async function signup(username:string,password:string,repo:Repo):Promise<
 
     log('setting up teams database')
     // setup their app database
-    const db = new Database<UserTeamsState,UserTeamsStateUpdateEvt>(username + "-app-settings", UserTeamsReducer, {teams:[]})
-    await db.create(user.tree.key!)
-
     const did = await user.tree.id()
-    log('allowing writers')
-    await db.allowWriters(user.tree.key!, [did!])
+    const db = new Database<UserTeamsState,UserTeamsStateUpdateEvt>(username + "-app-settings", UserTeamsReducer)
+    await db.create(user.tree.key!, {
+        writers: [did!],
+        initialState: {
+            teams: [],
+        }
+    })
     log('done')
     return user
 }

@@ -8,13 +8,14 @@ import { useParams } from 'react-router';
 import { defaultState, DailyState, DailyStateReducer, DailyAction, addStandupAction, addUserAction } from '../util/standupdb';
 import { Database, findUserAccount } from 'ambient-stack';
 import debug from 'debug'
+import { PulseLoader } from 'react-spinners';
 
 const log = debug("pages.home")
 
-function UserList({ database, userNames }: { database: Database<DailyState,DailyAction>, userNames: string[] }) {
+function UserList({ database, userNames }: { database: Database<DailyState, DailyAction>, userNames: string[] }) {
     let teamUsers: JSX.Element[] = []
     const { user } = useAmbientUser()
-    const [userName,setUserName] = useState("")
+    const [userName, setUserName] = useState("")
 
     if (userNames) {
         teamUsers = userNames.map((userName: string, i: number) => {
@@ -27,8 +28,8 @@ function UserList({ database, userNames }: { database: Database<DailyState,Daily
     const onChange = (evt: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
         setUserName(evt.target.value)
     }
-    
-    const onSubmit = async (evt:FormEvent) => {
+
+    const onSubmit = async (evt: FormEvent) => {
         evt.preventDefault()
         if (!user) {
             throw new Error("must have an admin user")
@@ -38,7 +39,7 @@ function UserList({ database, userNames }: { database: Database<DailyState,Daily
         if (!userTree) {
             throw new Error("not found")
         }
-        
+
         const userDid = await userTree?.id()
         database.allowWriters(user.tree.key!, [userDid!])
         log("allowed ", userName)
@@ -68,7 +69,7 @@ export function Home() {
 
     log("teamName: ", teamName)
 
-    const [dispatch, dbState, db] = useAmbientDatabase<DailyState, DailyAction>(teamName!, DailyStateReducer, defaultState)
+    const [dispatch, dbState, db] = useAmbientDatabase<DailyState, DailyAction>(teamName!, DailyStateReducer)
 
     const onChange = (evt: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
         const newState = { ...standup, [evt.target.name]: evt.target.value }
@@ -78,24 +79,29 @@ export function Home() {
 
     useEffect(() => {
         if (user && standup.name !== user.userName) {
-            setStandup((st)=> {return {...st, name: user.userName}})
+            setStandup((st) => { return { ...st, name: user.userName } })
         }
     }, [user, standup])
 
-    let todaysStandups: JSX.Element[] = []
 
-    if (dbState.standups) {
-        todaysStandups = Object.entries(dbState.standups).map(([_, value], i) => {
-            return (<StandupReport
-                key={i}
-                today={value.today}
-                yesterday={value.yesterday}
-                blockers={value.blockers}
-                name={value.name}
-            />
-            )
-        });
+    if (!db.initiallyLoaded) {
+        return (
+            <Box fill align="center" justify="center">
+                <PulseLoader />
+            </Box>
+        )
     }
+
+    const todaysStandups = Object.entries(dbState.standups).map(([_, value], i) => {
+        return (<StandupReport
+            key={i}
+            today={value.today}
+            yesterday={value.yesterday}
+            blockers={value.blockers}
+            name={value.name}
+        />
+        )
+    });
 
     return (
         <Box fill align="center" justify="center">
