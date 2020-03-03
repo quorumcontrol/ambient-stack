@@ -81,6 +81,26 @@ export function Home() {
         }
     }, [user, standup])
 
+    useEffect(()=> {
+        log("setting db once")
+        db.once('initialSync', ()=> {
+            log("initial sync on home page")
+            setStandup((st) => { 
+                const newState = {...st}
+                const dbStandup = db.state?.standups[user!.userName]
+                log("dbStandup: ", dbStandup)
+                for (let key of ["today", "yesterday", "blockers"]) {
+                    console.log(`reflect ${key}: ${Reflect.get(st, key)}`)
+                    if (!Reflect.get(st, key)) {
+                        console.log(`setting ${key} to: `, Reflect.get(dbStandup, key))
+                        Reflect.set(newState, key, Reflect.get(dbStandup, key))
+                    }
+                }
+                return newState
+            })
+        })
+    }, [db])
+
 
     if (!db.initiallyLoaded) {
         return (
