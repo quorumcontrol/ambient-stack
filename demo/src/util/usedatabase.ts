@@ -6,11 +6,10 @@ import debug from 'debug'
 
 const log = debug("util.usedatabase")
 
+export type dispatcher<A> = (action:A)=>void
 
-export function useAmbientDatabase<S,A>(name:string, reducer:Reducer<S,A>, initialState?:S):[(action:A)=>void, S] {
+export function useAmbientDatabase<S,A>(name:string, reducer:Reducer<S,A>, initialState?:S):[dispatcher<A>, S, Database<S,A>] {
     const {user} = useAmbientUser()
-
-    getAppCommunity() // just to make sure it gets setup
 
     const [db, setDb] = useState(undefined as undefined|Database<S,A>)
     const [state,setState] = useState({} as FreezeObject<S>)
@@ -22,14 +21,14 @@ export function useAmbientDatabase<S,A>(name:string, reducer:Reducer<S,A>, initi
 
 
     if (db !== undefined) {
-        return [db.dispatch.bind(db), state as S]
+        return [db.dispatch.bind(db), state as S, db]
     }
     const newDb = new Database<S,A>(name, reducer, initialState)
     setState(newDb.state)
     setDb(newDb)
 
     newDb.on('update', ()=> {
-        log('updating state')
+        log('updating state: ', newDb.state)
         setState(newDb.state)
     })
 
@@ -38,6 +37,5 @@ export function useAmbientDatabase<S,A>(name:string, reducer:Reducer<S,A>, initi
         setState(newDb.state)
     })
 
-
-    return [newDb.dispatch.bind(newDb), state as S]
+    return [newDb.dispatch.bind(newDb), state as S, newDb]
 }

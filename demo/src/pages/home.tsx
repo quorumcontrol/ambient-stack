@@ -1,25 +1,25 @@
 import React, { useState, ChangeEvent, useEffect, FormEvent } from 'react';
 import { Box, Heading, Text, Form, FormField, TextArea, Button } from 'grommet';
-import { useAmbientUser, getIcon } from '../util/user';
+import { useAmbientUser, getIcon, userNamespace } from '../util/user';
 import { useAmbientDatabase, } from '../util/usedatabase';
-
 import { Previous, Next } from 'grommet-icons';
 import { StandupReport, StandupProps } from '../components/standupreport';
 import { useParams } from 'react-router';
+import { defaultState, DailyState, DailyStateReducer, DailyAction, addStandupAction, addUserAction } from '../util/standupdb';
+import { Database, findUserAccount } from 'ambient-stack';
 import debug from 'debug'
-import { defaultState, DailyState, DailyStateReducer, DailyAction, addStandupAction } from '../util/standupdb';
 
 const log = debug("pages.home")
 
-function UserList({ dispatch, userNames }: { dispatch: (action: DailyAction) => void, userNames: string[] }) {
+function UserList({ database, userNames }: { database: Database<DailyState,DailyAction>, userNames: string[] }) {
     let teamUsers: JSX.Element[] = []
-
+    const { user } = useAmbientUser()
     const [userName,setUserName] = useState("")
 
     if (userNames) {
         teamUsers = userNames.map((userName: string, i: number) => {
             return (
-                <li key={"user-" + i.toString()}>userName</li>
+                <li key={"user-" + i.toString()}>{userName}</li>
             )
         })
     }
@@ -28,13 +28,25 @@ function UserList({ dispatch, userNames }: { dispatch: (action: DailyAction) => 
         setUserName(evt.target.value)
     }
     
-    const onSubmit = (evt:FormEvent) => {
+    const onSubmit = async (evt:FormEvent) => {
         evt.preventDefault()
-
+        if (!user) {
+            throw new Error("must have an admin user")
+        }
+        database.dispatch(addUserAction(userName))
+        const userTree = await findUserAccount(userName, userNamespace)
+        if (!userTree) {
+            throw new Error("not found")
+        }
+        
+        const userDid = await userTree?.id()
+        database.allowWriters(user.tree.key!, [userDid!])
+        log("allowed ", userName)
     }
 
     return (
         <Box alignContent="center" justify="around" direction="row" pad="medium">
+            <Heading size="small">Users in this team</Heading>
             <ul>
                 {teamUsers}
             </ul>
@@ -56,7 +68,7 @@ export function Home() {
 
     log("teamName: ", teamName)
 
-    const [dispatch, db] = useAmbientDatabase<DailyState, DailyAction>(teamName!, DailyStateReducer, defaultState)
+    const [dispatch, dbState, db] = useAmbientDatabase<DailyState, DailyAction>(teamName!, DailyStateReducer, defaultState)
 
     const onChange = (evt: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
         const newState = { ...standup, [evt.target.name]: evt.target.value }
@@ -65,13 +77,15 @@ export function Home() {
     }
 
     useEffect(() => {
-        log("use effect called")
+        if (user && standup.name !== user.userName) {
+            setStandup((st)=> {return {...st, name: user.userName}})
+        }
     }, [user, standup])
 
     let todaysStandups: JSX.Element[] = []
 
-    if (db.standups) {
-        todaysStandups = Object.entries(db.standups).map(([_, value], i) => {
+    if (dbState.standups) {
+        todaysStandups = Object.entries(dbState.standups).map(([_, value], i) => {
             return (<StandupReport
                 key={i}
                 today={value.today}
@@ -135,7 +149,7 @@ export function Home() {
                     </Box>
                 </Box>
 
-                <UserList dispatch={dispatch} userNames={db.users} />
+                <UserList database={db} userNames={dbState.users} />
 
             </Box>
         </Box>

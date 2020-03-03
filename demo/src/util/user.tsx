@@ -61,8 +61,8 @@ export async function signup(username:string,password:string,repo:Repo):Promise<
     await repo.put(privateKeyKey, user.tree.key?.privateKey!)
 
     log('setting up teams database')
-    // setup their teams database
-    const db = new Database<UserTeamsState,UserTeamsStateUpdateEvt>(username + "-teams", UserTeamsReducer, {teams:[]})
+    // setup their app database
+    const db = new Database<UserTeamsState,UserTeamsStateUpdateEvt>(username + "-app-settings", UserTeamsReducer, {teams:[]})
     await db.create(user.tree.key!)
 
     const did = await user.tree.id()
@@ -162,7 +162,17 @@ export function useAmbientUser(): AmbientUserReturn {
             
                         const c = await getAppCommunity()
                         const key = await EcdsaKey.fromBytes(privateKey)
-                        const user = await User.find(username.toString(), userNamespace, c)
+                        let user
+                        try {
+                            user = await User.find(username.toString(), userNamespace, c)
+                        } catch(e) {
+                            if (e.message === "no tree found") {
+                                await logout(repo)
+                                resolve(undefined)
+                                return // no user
+                            }
+                            throw e
+                        }
                         user.tree.key = key
                         await user.load()
                         resolve(user)
