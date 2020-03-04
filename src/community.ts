@@ -3,7 +3,7 @@ import debug from 'debug'
 
 const isNode = require('is-node')
 
-const log = debug("community")
+const log = debug("ambient-community")
 
 let _appCommunityPromise: Promise<Community>
 

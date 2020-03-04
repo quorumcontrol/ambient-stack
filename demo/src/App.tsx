@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grommet, Box } from 'grommet';
+import { Grommet, Box, ThemeType } from 'grommet';
 import {
   BrowserRouter as Router,
   Switch,
@@ -11,9 +11,15 @@ import { Home } from './pages/home';
 import { useAmbientUser } from './util/user';
 import { PulseLoader } from 'react-spinners';
 import { Teams } from './pages/teams';
+import { LoggedInLayout } from './pages/layout'
+import { grommet } from "grommet/themes";
 
-const theme = {
+
+const theme: ThemeType = {
   global: {
+    colors: {
+      text: "rgb(68, 68, 68)",
+    },
     font: {
       family: 'Roboto',
       size: '18px',
@@ -24,9 +30,9 @@ const theme = {
 
 // A wrapper for <Route> that redirects to the login
 // screen if you're not yet authenticated.
-function AuthenticatedRoute({ children, ...rest }:any) {
+function AuthenticatedRoute({ children, ...rest }: any) {
 
-  const {loading,user} = useAmbientUser()
+  const { loading, user } = useAmbientUser()
 
   if (loading) {
     return (
@@ -43,13 +49,13 @@ function AuthenticatedRoute({ children, ...rest }:any) {
         user ? (
           children
         ) : (
-          <Redirect
-            to={{
-              pathname: "/login",
-              state: { from: location }
-            }}
-          />
-        )
+            <Redirect
+              to={{
+                pathname: "/login",
+                state: { from: location }
+              }}
+            />
+          )
       }
     />
   );
@@ -58,7 +64,7 @@ function AuthenticatedRoute({ children, ...rest }:any) {
 
 const App: React.FC = () => {
   return (
-    <Grommet theme={theme}>
+    <Grommet theme={grommet}>
       <Router>
 
         <Switch>
@@ -66,10 +72,14 @@ const App: React.FC = () => {
             <Login />
           </Route>
           <AuthenticatedRoute path="/teams/:teamName">
-            <Home />
+            <LoggedInLayout>
+              <Home />
+            </LoggedInLayout>
           </AuthenticatedRoute>
           <AuthenticatedRoute path="/">
-            <Teams />
+            <LoggedInLayout>
+              <Teams />
+            </LoggedInLayout>
           </AuthenticatedRoute>
         </Switch>
 

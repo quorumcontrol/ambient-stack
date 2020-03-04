@@ -1,23 +1,22 @@
 import React, { useState, ChangeEvent } from 'react'
-import { Box, Heading, Button, FormField, Form } from 'grommet'
+import { Box, Heading, Button, FormField, Form, DropButton } from 'grommet'
 import { useAmbientUser, logout, useUserRepo } from '../util/user'
 import { Database } from 'ambient-stack'
 import { useAmbientDatabase } from '../util/usedatabase'
 import { UserTeamsReducer, UserTeamsState, UserTeamsStateUpdateEvt, UserTeamsStateActions } from '../util/teamdb'
 import debug from 'debug'
 import { Link, useHistory } from 'react-router-dom'
-import {  DailyState, DailyStateReducer, DailyAction } from '../util/standupdb'
+import { DailyState, DailyStateReducer, DailyAction } from '../util/standupdb'
 import { PulseLoader } from 'react-spinners'
 
 const log = debug("pages.teams")
 
 export function Teams() {
     const [state, setState] = useState({ loading: false, teamName: "" })
+    const [dropOpen, setDropOpen] = useState(false)
     const { user } = useAmbientUser()
 
     const [dispatch, teamState, db] = useAmbientDatabase<UserTeamsState, UserTeamsStateUpdateEvt>(user!.userName + "-app-settings", UserTeamsReducer)
-    const {repo} = useUserRepo()
-    const history = useHistory()
 
     const onCreateClick = async () => {
         if (!user) {
@@ -35,6 +34,7 @@ export function Teams() {
                     name: state.teamName,
                 } as UserTeamsStateUpdateEvt)
                 // nothing else TODO
+                setDropOpen(false)
                 return
             }
 
@@ -49,8 +49,9 @@ export function Teams() {
         } as UserTeamsStateUpdateEvt)
         log("creating standup database: ", state.teamName)
         const did = await user?.tree.id()
+        setDropOpen(false)
         return db.create(user?.tree.key!, {
-            writers:[did!],
+            writers: [did!],
             initialState: {
                 users: [user.userName!],
                 standups: {},
@@ -62,15 +63,6 @@ export function Teams() {
         setState({ ...state, teamName: evt.target.value })
     }
 
-    const onLogout = async ()=> {
-        if (!repo) {
-            throw new Error("no repo!")
-        }
-
-        await logout(repo)
-        history.push("/login")
-    }
-
     if (!db.initiallyLoaded) {
         return (
             <Box fill align="center" justify="center">
@@ -79,8 +71,6 @@ export function Teams() {
         )
     }
 
-    log("user: ", user, " team state: ", teamState)
-
     const teamLIs = teamState.teams ? teamState.teams.map((teamName: string, i: number) => {
         return (
             <li key={i}><Link to={"/teams/" + teamName}>{teamName}</Link></li>
@@ -88,23 +78,27 @@ export function Teams() {
     }) : []
 
     return (
-        <Box fill align="center" justify="center">
-            <Box fill pad="small">
-                <Heading size="medium">My teams</Heading>
-                <p>{user ? user.userName : null}</p>
-                <Button onClick={onLogout}>Logout</Button>
-                <Box alignContent="center" justify="around" direction="row" color="light" pad="medium">
-                    <Form>
-                        <FormField type="text" label="Team Name" name="teamName" value={state.teamName} onChange={onChange} />
-                        <Button onClick={onCreateClick}>Create</Button>
-                    </Form>
-                </Box>
-                <Box alignContent="center" justify="around" direction="row" color="light" pad="medium">
-                    <ul>
-                        {teamLIs}
-                    </ul>
-                </Box>
-            </Box>
+        <Box pad="small">
+            <Heading size="small">My teams</Heading>
+            <ul>
+                {teamLIs}
+            </ul>
+
+            <DropButton
+                label="Add"
+                dropAlign={{ top: 'bottom', left: 'left' }}
+                open={dropOpen}
+                onClose={() => setDropOpen(false)}
+                onOpen={() => setDropOpen(true)}
+                dropContent={
+                    <Box align="center" pad="small">
+                        <Form>
+                            <FormField type="text" label="Team Name" name="teamName" value={state.teamName} onChange={onChange} />
+                            <Button label="Create" type="submit" primary onClick={onCreateClick} />
+                        </Form>
+                    </Box>
+                }
+            />
         </Box>
     )
 }
