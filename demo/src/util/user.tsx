@@ -180,6 +180,8 @@ export function useAmbientUser(): AmbientUserReturn {
                         resolve(user)
                     })
                 }
+            }
+            if (!appUser.user) {
                 awaitUser()
             }
           

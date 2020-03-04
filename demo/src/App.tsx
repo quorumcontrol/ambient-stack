@@ -11,8 +11,9 @@ import { Home } from './pages/home';
 import { useAmbientUser } from './util/user';
 import { PulseLoader } from 'react-spinners';
 import { Teams } from './pages/teams';
-import { LoggedInLayout } from './pages/layout'
+import { Layout } from './pages/layout'
 import { grommet } from "grommet/themes";
+import { register } from '../../lib';
 
 
 const theme: ThemeType = {
@@ -66,25 +67,21 @@ const App: React.FC = () => {
   return (
     <Grommet theme={grommet}>
       <Router>
-
-        <Switch>
-          <Route path="/login">
-            <Login />
-          </Route>
-          <AuthenticatedRoute path="/teams/:teamName">
-            <LoggedInLayout>
+        <Layout>
+          <Switch>
+            <Route path="/login">
+              <Login />
+            </Route>
+            <AuthenticatedRoute path="/teams/:teamName">
               <Home />
-            </LoggedInLayout>
-          </AuthenticatedRoute>
-          <AuthenticatedRoute path="/">
-            <LoggedInLayout>
+            </AuthenticatedRoute>
+            <AuthenticatedRoute path="/">
               <Teams />
-            </LoggedInLayout>
-          </AuthenticatedRoute>
-        </Switch>
+            </AuthenticatedRoute>
+          </Switch>
+        </Layout>
 
       </Router>
-
     </Grommet>
   );
 }

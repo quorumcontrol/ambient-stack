@@ -40,7 +40,7 @@ const UserHeader = ({ user }: { user: User }) => {
     )
 }
 
-export const LoggedInLayout = ({ children }: { children: React.ReactNode }) => {
+export const Layout = ({ children }: { children: React.ReactNode }) => {
     const { user } = useAmbientUser()
 
     return (

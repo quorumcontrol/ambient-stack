@@ -108,13 +108,17 @@ export function Home() {
         )
     }
 
-    const todaysStandups = Object.entries(dbState.standups).map(([_, value], i) => {
+    const todaysStandups = dbState.users.map((userName, i) => {
+        let standup = dbState.standups[userName]
+        if (!standup) {
+            standup = {name: userName}
+        }
         return (<StandupReport
             key={i}
-            today={value.today}
-            yesterday={value.yesterday}
-            blockers={value.blockers}
-            name={value.name}
+            today={standup.today}
+            yesterday={standup.yesterday}
+            blockers={standup.blockers}
+            name={standup.name}
         />
         )
     });
@@ -124,9 +128,9 @@ export function Home() {
             <Box fill pad="small">
                 <Heading size="medium">Daily Standups</Heading>
                 <Box background="light-2" alignContent="center" justify="around" direction="row" color="light" pad="medium">
-                    <Box basis="small" alignSelf="center">
+                    {/* <Box basis="small" alignSelf="center">
                         <Previous size="xlarge" />
-                    </Box>
+                    </Box> */}
                     <Box elevation="small" pad="medium" basis="1/2">
                         <Heading size="small">Today</Heading>
                         <Box>
@@ -145,12 +149,6 @@ export function Home() {
 
 
                         </Box>
-                    </Box>
-                    <Box pad="medium" align="center" alignSelf="center" basis="small">
-                        <Box width="120px" height="120px" round="full" overflow="hidden" align="center" alignContent="center">
-                            {getIcon(user!.userName)}
-                        </Box>
-                        <Text>{user!.userName}</Text>
                     </Box>
                 </Box>
 
@@ -171,7 +169,7 @@ export function Home() {
                     </Box>
                 </Box>
 
-                <UserList database={db} userNames={dbState.users} />
+                {/* <UserList database={db} userNames={dbState.users} /> */}
 
             </Box>
         </Box>

@@ -85,6 +85,7 @@ export function Teams() {
             </ul>
 
             <DropButton
+                margin={{top:"1em"}}
                 label="Add"
                 dropAlign={{ top: 'bottom', left: 'left' }}
                 open={dropOpen}
