@@ -1,15 +1,14 @@
 import React, { useState, FormEvent, ChangeEvent, useEffect } from 'react';
 import { Box, Heading, Form, FormField, Button, Header, Text, Tabs, Tab } from 'grommet';
 import { PulseLoader } from 'react-spinners';
-import { useUserRepo, login, signup } from '../util/user';
+import { useAmbientUser } from '../util/user';
 import { Redirect } from "react-router";
 import debug from 'debug'
-import { Home } from 'grommet-icons';
 
 const log = debug("pages.login")
 
 export function Login() {
-    const [state, setState] = useState({ loading: true } as {
+    const [state, setState] = useState({ loading: false } as {
         username: string,
         password: string,
         passwordConfirmation: string,
@@ -18,18 +17,10 @@ export function Login() {
         success: boolean,
     })
 
-    const { repo, loading } = useUserRepo()
+    const {login,register} = useAmbientUser()
     const [index, setIndex] = useState();
 
     const onActive = (nextIndex: number) => setIndex(nextIndex);
-
-    useEffect(() => {
-        if (!loading) {
-            setState((s) => {
-                return { ...s, loading: false }
-            })
-        }
-    }, [loading])
 
     const onChange = (evt: ChangeEvent<HTMLInputElement>) => {
         setState({ ...state, [evt.target.name]: evt.target.value })
@@ -37,10 +28,6 @@ export function Login() {
 
     const onLogin = async (evt: FormEvent) => {
         evt.preventDefault()
-        if (!repo) {
-            throw new Error("need a repo to login (this should never happen)")
-        }
-
         setState((state) => { return { ...state, loading: true } })
 
         if (!state.username || !state.password) {
@@ -49,7 +36,7 @@ export function Login() {
         }
 
         log("login pushed: ", state.username)
-        const [found] = await login(state.username, state.password, repo)
+        const [found] = await login(state.username, state.password)
         if (!found) {
             setState((state) => { return { ...state, loading: false, error: "user not found" } })
             return
@@ -58,11 +45,9 @@ export function Login() {
         setState((state) => { return { ...state, loading: false, success: true } })
     }
 
-    const register = async (evt: any) => {
+    const onRegister = async (evt: any) => {
         evt.preventDefault()
-        if (!repo) {
-            throw new Error("need a repo to login (this should never happen)")
-        }
+
         if (state.password !== state.passwordConfirmation) {
             setState((state) => { return { ...state, error: "passwords do not match", loading: false } })
             return
@@ -75,7 +60,7 @@ export function Login() {
             return
         }
 
-        await signup(state.username, state.password, repo)
+        await register(state.username, state.password)
         log("signed up")
         setState((state) => { return { ...state, loading: false, success: true } })
     }
@@ -116,7 +101,7 @@ export function Login() {
                         <Box pad="small">
                             <Heading size="small">Register</Heading>
                             <Text color="status-error">{state.error}</Text>
-                            <Form onSubmit={register}>
+                            <Form onSubmit={onRegister}>
                                 <FormField label="Username" value={state.username} name="username" onChange={onChange} />
                                 <FormField label="Password" value={state.password} name="password" type="password" onChange={onChange} />
                                 <FormField label="Password Confirmation" value={state.passwordConfirmation} name="passwordConfirmation" type="password" onChange={onChange} />

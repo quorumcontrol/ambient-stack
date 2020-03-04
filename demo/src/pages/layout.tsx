@@ -1,7 +1,7 @@
 import React from 'react'
 import { Header, Button, Box, Text, Menu } from 'grommet'
 import { Home } from 'grommet-icons'
-import { useAmbientUser, useUserRepo, logout, getIcon } from '../util/user'
+import { useAmbientUser, getIcon } from '../util/user'
 import { useHistory } from 'react-router'
 import { User } from '../../../lib'
 
@@ -17,16 +17,11 @@ const Avatar = ({ user }: { user: User }) => {
     )
 }
 
-const UserHeader = ({ user }: { user: User }) => {
+const UserHeader = ({ user,logout }: { user: User, logout:()=>Promise<void> }) => {
     const history = useHistory()
-    const { repo } = useUserRepo()
 
     const onLogout = async () => {
-        if (!repo) {
-            throw new Error("no repo!")
-        }
-
-        await logout(repo)
+        await logout()
         history.push("/login")
     }
 
@@ -41,7 +36,7 @@ const UserHeader = ({ user }: { user: User }) => {
 }
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
-    const { user } = useAmbientUser()
+    const { user,logout } = useAmbientUser()
 
     return (
         <Box fill>
@@ -50,7 +45,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                     <Button icon={<Home />}></Button>
                     <Text>Async Daily Standups</Text>
                 </div>
-                {user ? <UserHeader user={user} /> : null}
+                {user ? <UserHeader user={user} logout={logout} /> : null}
             </Header>
             <Box fill justify="center" align="center">
                 <Box width="xlarge" align="start">

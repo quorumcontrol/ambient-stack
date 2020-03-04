@@ -1,6 +1,6 @@
 import React, { useState, ChangeEvent } from 'react'
 import { Box, Heading, Button, FormField, Form, DropButton } from 'grommet'
-import { useAmbientUser, logout, useUserRepo } from '../util/user'
+import { useAmbientUser } from '../util/user'
 import { Database } from 'ambient-stack'
 import { useAmbientDatabase } from '../util/usedatabase'
 import { UserTeamsReducer, UserTeamsState, UserTeamsStateUpdateEvt, UserTeamsStateActions } from '../util/teamdb'

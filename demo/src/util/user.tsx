@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { User, getAppCommunity, verifyAccount, register, Database} from 'ambient-stack';
+import { User, getAppCommunity, verifyAccount, register, Database } from 'ambient-stack';
 import { EcdsaKey, Repo } from 'tupelo-wasm-sdk';
 import debug from 'debug';
 
@@ -9,17 +9,13 @@ import carol from '../images/carol.jpg'
 import { User as UserIcon } from 'grommet-icons';
 import { Image } from 'grommet';
 
-import { UserTeamsState, UserTeamsReducer, UserTeamsStateUpdateEvt} from './teamdb';
+import { UserTeamsState, UserTeamsReducer, UserTeamsStateUpdateEvt } from './teamdb';
+import { EventEmitter } from 'events';
 
 const log = debug("util.user")
 
 export const userNamespace = Buffer.from('demo-only-async-daily-standups')
 const Key = require("interface-datastore").Key
-
-interface AmbientUserReturn {
-    loading: boolean
-    user?: User
-}
 
 export function getIcon(name: string): JSX.Element {
     let userIcon
@@ -42,151 +38,168 @@ export function getIcon(name: string): JSX.Element {
     return userIcon
 }
 
-export async function login(username:string,password:string,repo:Repo):Promise<[boolean,User?]> {
-    const [found,user] = await verifyAccount(username, password, userNamespace)
-    if (found) {
-        await repo.put(usernameKey, Buffer.from(username))
-        //TODO: need to more securely store the private key here
-        await repo.put(privateKeyKey, user?.tree.key?.privateKey!)
-        return [true, user]
-    }
-    return [false,undefined]
-}
-
-export async function signup(username:string,password:string,repo:Repo):Promise<User> {
-    log('registering user')
-    const user = await register(username,password,userNamespace)
-    await repo.put(usernameKey, Buffer.from(username))
-    //TODO: need to more securely store the private key here
-    await repo.put(privateKeyKey, user.tree.key?.privateKey!)
-
-    log('setting up teams database')
-    // setup their app database
-    const did = await user.tree.id()
-    const db = new Database<UserTeamsState,UserTeamsStateUpdateEvt>(username + "-app-settings", UserTeamsReducer)
-    await db.create(user.tree.key!, {
-        writers: [did!],
-        initialState: {
-            teams: [],
-        }
-    })
-    log('done')
-    return user
-}
-
-
-interface repoState {
-    loading: boolean
-    repo?: Repo
-}
-
-let repos:{
-    [key:string]:Promise<Repo>
-} = {}
-
-export function useUserRepo():repoState {
-    return useRepo("ambientUser")
-}
-
-export function useRepo(repoName: string, opts?: any): repoState {
-    const [state, setState] = useState({ loading: true } as repoState)
-
-    useEffect(() => {
-        let repoPromise = repos[repoName]
-        if (!repoPromise) {
-            repoPromise = new Promise(async (resolve)=> {
-                const repo = new Repo(repoName, opts)
-                await repo.init({})
-                await repo.open()
-                resolve(repo)
-            })
-            repos[repoName] = repoPromise
-        }
-        const waitForRepo = async () => {
-            let repo = await repoPromise
-            setState({ loading: false, repo: repo })
-        }
-        waitForRepo()
-    }, [repoName, opts])
-
-    return state
-}
-
 const usernameKey = new Key("username")
 const privateKeyKey = new Key("privateKey")
 
-export async function logout(repo:Repo) {
-    await repo.delete(usernameKey)
-    await repo.delete(privateKeyKey)
-    appUser = {user:undefined, userPromise:undefined}
+class AppUser extends EventEmitter {
+    user?: User
+    userPromise?: Promise<User | undefined>
+    repo: Promise<Repo>
+
+    constructor() {
+        super()
+        this.repo = new Promise(async (resolve) => {
+            const repo = new Repo("ambientUser")
+            await repo.init({})
+            await repo.open()
+            resolve(repo)
+        })
+        this.loadFromRepo()
+    }
+
+    async logout() {
+        const repo = await this.repo
+        await repo.delete(usernameKey)
+        await repo.delete(privateKeyKey)
+        this.user = undefined
+        this.userPromise = undefined
+        this.emit('update')
+        return
+    }
+
+    async login(username: string, password: string): Promise<[boolean, User?]> {
+        const repo = await this.repo
+        const [found, user] = await verifyAccount(username, password, userNamespace)
+        if (found) {
+            await repo.put(usernameKey, Buffer.from(username))
+            //TODO: need to more securely store the private key here
+            await repo.put(privateKeyKey, user?.tree.key?.privateKey!)
+            this.user = user
+            this.userPromise = Promise.resolve(user!)
+            this.emit('update')
+            return [true, user]
+        }
+        return [false, undefined]
+    }
+
+    async register(username: string, password: string): Promise<User> {
+        log('registering user')
+        const repo = await this.repo
+
+        const user = await register(username, password, userNamespace)
+        await repo.put(usernameKey, Buffer.from(username))
+        //TODO: need to more securely store the private key here
+        await repo.put(privateKeyKey, user.tree.key?.privateKey!)
+
+        log('setting up teams database')
+        // setup their app database
+        const did = await user.tree.id()
+        const db = new Database<UserTeamsState, UserTeamsStateUpdateEvt>(username + "-app-settings", UserTeamsReducer)
+        await db.create(user.tree.key!, {
+            writers: [did!],
+            initialState: {
+                teams: [],
+            }
+        })
+        this.user = user
+        this.userPromise = Promise.resolve(user)
+        this.emit('update')
+        log('done')
+        return user
+    }
+
+    async loadFromRepo() {
+        if (this.userPromise) {
+            return this.userPromise
+        }
+        this.userPromise = new Promise<User | undefined>(async (resolve) => {
+            log("fetching user")
+            const repo = await this.repo
+            let username: string
+            try {
+                username = await repo.get(usernameKey)
+            } catch (e) {
+                if (e.code === "ERR_NOT_FOUND") {
+                    resolve(undefined)
+                    return // no user
+                }
+                throw e
+            }
+
+            const privateKey = await repo.get(privateKeyKey)
+
+            const c = await getAppCommunity()
+            const key = await EcdsaKey.fromBytes(privateKey)
+            let user
+            try {
+                user = await User.find(username.toString(), userNamespace, c)
+            } catch (e) {
+                if (e.message === "no tree found") {
+                    await this.logout()
+                    resolve(undefined)
+                    return // no user
+                }
+                throw e
+            }
+            user.tree.key = key
+            await user.load()
+            resolve(user)
+        })
+        this.userPromise.then((user: User | undefined) => {
+            this.user = user
+        }).finally(() => {
+            this.emit('update')
+        })
+        return this.userPromise
+    }
+
 }
 
-let appUser:{user:User|undefined, userPromise:Promise<User>|undefined} = {user:undefined, userPromise:undefined}
+const appUser = new AppUser()
+
+
+interface AmbientUserReturn {
+    loading: boolean
+    user?: User
+    logout: () => Promise<void>
+    login: (username: string, password: string) => Promise<[boolean, User?]>
+    register: (username: string, password: string) => Promise<User>
+}
+
 
 export function useAmbientUser(): AmbientUserReturn {
-    const [state, setState] = useState({ loading: !(appUser.user), user: appUser.user} as AmbientUserReturn)
 
-    const {repo} = useUserRepo()
+    const [state, setState] = useState({ 
+        loading: !(appUser.user),
+        user: appUser.user, 
+        login: appUser.login.bind(appUser), 
+        logout: appUser.logout.bind(appUser),
+        register: appUser.register.bind(appUser),
+    } as AmbientUserReturn)
 
     useEffect(() => {
-        const awaitUser = async ()=> {
-            let user = await appUser.userPromise
-            appUser.user = user
-            // user can be undefined here when not found
-            setState({
-                loading: false,
-                user: user,
-            })
-        }
+        appUser.on('update', () => {
+            if (appUser.user) {
+                setState((st) => {
+                    return { ...st, loading: false, user: appUser.user }
+                })
+                return
+            }
 
-        if (repo) {
-            if (!appUser.userPromise) {
-                appUser = {
-                    user: undefined,
-                    userPromise: new Promise(async (resolve)=> {
-                        if (!repo) {
-                            throw new Error("must have a repo to use (error should never happen)")
-                        }
-            
-                        log("fetching user")
-                        let username:string
-                        try {
-                            username = await repo.get(usernameKey)
-                        } catch(e) {
-                            if (e.code === "ERR_NOT_FOUND") {
-                                resolve(undefined)
-                                return // no user
-                            }
-                            throw e
-                        }
-            
-                        const privateKey = await repo.get(privateKeyKey)
-            
-                        const c = await getAppCommunity()
-                        const key = await EcdsaKey.fromBytes(privateKey)
-                        let user
-                        try {
-                            user = await User.find(username.toString(), userNamespace, c)
-                        } catch(e) {
-                            if (e.message === "no tree found") {
-                                await logout(repo)
-                                resolve(undefined)
-                                return // no user
-                            }
-                            throw e
-                        }
-                        user.tree.key = key
-                        await user.load()
-                        resolve(user)
-                    })
-                }
-            }
-            if (!appUser.user) {
-                awaitUser()
-            }
-          
+            // otherwise no user, so just set to undefined
+            setState((st) => {
+                return { ...st, loading: false, user: undefined }
+            })
+        })
+
+        // in the case where it's already loaded, load it
+        if (appUser.user) {
+            setState((st) => {
+                return { ...st, loading: false, user: appUser.user }
+            })
+            return
         }
-    }, [repo,])
+    }, [appUser])
 
     return state
 }
