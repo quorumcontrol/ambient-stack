@@ -7,7 +7,7 @@ import {
   Redirect,
 } from "react-router-dom";
 import { Login } from './pages/login';
-import { Home } from './pages/home';
+import { Team } from './pages/team';
 import { useAmbientUser } from './util/user';
 import { PulseLoader } from 'react-spinners';
 import { Teams } from './pages/teams';
@@ -73,7 +73,7 @@ const App: React.FC = () => {
               <Login />
             </Route>
             <AuthenticatedRoute path="/teams/:teamName">
-              <Home />
+              <Team />
             </AuthenticatedRoute>
             <AuthenticatedRoute path="/">
               <Teams />

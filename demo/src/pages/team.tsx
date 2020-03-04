@@ -1,5 +1,5 @@
 import React, { useState, ChangeEvent, useEffect, FormEvent } from 'react';
-import { Box, Heading, Text, Form, FormField, TextArea, Button } from 'grommet';
+import { Box, Heading, Text, Form, FormField, TextArea, Button, DropButton } from 'grommet';
 import { useAmbientUser, getIcon, userNamespace } from '../util/user';
 import { useAmbientDatabase, } from '../util/usedatabase';
 import { Previous, Next } from 'grommet-icons';
@@ -12,18 +12,10 @@ import { PulseLoader } from 'react-spinners';
 
 const log = debug("pages.home")
 
-function UserList({ database, userNames }: { database: Database<DailyState, DailyAction>, userNames: string[] }) {
-    let teamUsers: JSX.Element[] = []
+function UserAdder({ database }: { database: Database<DailyState, DailyAction>}) {
     const { user } = useAmbientUser()
     const [userName, setUserName] = useState("")
-
-    if (userNames) {
-        teamUsers = userNames.map((userName: string, i: number) => {
-            return (
-                <li key={"user-" + i.toString()}>{userName}</li>
-            )
-        })
-    }
+    const [dropOpen, setDropOpen] = useState(false)
 
     const onChange = (evt: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
         setUserName(evt.target.value)
@@ -42,27 +34,32 @@ function UserList({ database, userNames }: { database: Database<DailyState, Dail
 
         const userDid = await userTree?.id()
         database.allowWriters(user.tree.key!, [userDid!])
+        setDropOpen(false)
         log("allowed ", userName)
     }
 
     return (
-        <Box alignContent="center" justify="around" direction="row" pad="medium">
-            <Heading size="small">Users in this team</Heading>
-            <ul>
-                {teamUsers}
-            </ul>
-            <Form onSubmit={onSubmit}>
-                <FormField name="username" label="User to add" value={userName} onChange={onChange} />
-                <Button type="submit" primary>Add</Button>
-            </Form>
-        </Box>
-
+        <DropButton
+                margin={{top:"1em"}}
+                label="Add teammate"
+                dropAlign={{ top: 'bottom', left: 'left' }}
+                open={dropOpen}
+                onClose={() => setDropOpen(false)}
+                onOpen={() => setDropOpen(true)}
+                dropContent={
+                    <Box align="center" pad="small">
+                        <Form onSubmit={onSubmit}>
+                            <FormField type="text" label="Username" name="teamName" value={userName} onChange={onChange} />
+                            <Button label="Add" type="submit" primary />
+                        </Form>
+                    </Box>
+                }
+            />
     )
-
 }
 
 
-export function Home() {
+export function Team() {
     let { teamName } = useParams();
     const { user } = useAmbientUser()
     const [standup, setStandup] = useState({} as StandupProps)
@@ -128,9 +125,6 @@ export function Home() {
             <Box fill pad="small">
                 <Heading size="medium">Daily Standups</Heading>
                 <Box background="light-2" alignContent="center" justify="around" direction="row" color="light" pad="medium">
-                    {/* <Box basis="small" alignSelf="center">
-                        <Previous size="xlarge" />
-                    </Box> */}
                     <Box elevation="small" pad="medium" basis="1/2">
                         <Heading size="small">Today</Heading>
                         <Box>
@@ -145,9 +139,6 @@ export function Home() {
                                     <TextArea name="blockers" value={standup.blockers} onChange={onChange} />
                                 </FormField>
                             </Form>
-
-
-
                         </Box>
                     </Box>
                 </Box>
@@ -169,7 +160,9 @@ export function Home() {
                     </Box>
                 </Box>
 
-                {/* <UserList database={db} userNames={dbState.users} /> */}
+                <Box align="center">
+                    <UserAdder database={db}/>
+                </Box>
 
             </Box>
         </Box>
