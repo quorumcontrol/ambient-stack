@@ -1,10 +1,11 @@
 import React from 'react'
 import { Header, Button, Box, Text, Menu } from 'grommet'
 import { Home } from 'grommet-icons'
-import { useAmbientUser, getIcon } from '../util/user'
+import { getIcon } from '../util/user'
 import { useHistory } from 'react-router'
 import { Link } from 'react-router-dom'
-import { User } from '../../../lib'
+import { User } from 'ambient-stack'
+import {useAmbientUser} from 'ambient-react'
 
 
 const Avatar = ({ user }: { user: User }) => {

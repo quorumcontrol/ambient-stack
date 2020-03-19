@@ -17,10 +17,16 @@ export class AppUser extends EventEmitter {
 
     static userNamespace?:Buffer
     static events = new EventEmitter()
+    private static namespaceSet = false
 
     static setUserNamespace = (namespace:string) => {
+        log("userNamespace set to: ", namespace)
         AppUser.userNamespace = Buffer.from(namespace)
+        AppUser.namespaceSet = true
+        AppUser.events.emit('_usernamespace_set')
     }
+
+    static afterRegister?:(user:User)=>Promise<User>
 
     constructor() {
         super()
@@ -30,7 +36,13 @@ export class AppUser extends EventEmitter {
             await repo.open()
             resolve(repo)
         })
-        this.loadFromRepo()
+        if (AppUser.namespaceSet) {
+            this.loadFromRepo()
+        } else {
+            AppUser.events.once('_usernamespace_set', ()=> {
+                this.loadFromRepo()
+            })
+        }
     }
 
     async logout() {
@@ -55,7 +67,7 @@ export class AppUser extends EventEmitter {
             await repo.put(privateKeyKey, user?.tree.key?.privateKey!)
             this.user = user
             this.userPromise = Promise.resolve(user!)
-            AppUser.events.emit('login', this)
+            AppUser.events.emit('login', user)
             this.emit('update')
             return [true, user]
         }
@@ -69,14 +81,17 @@ export class AppUser extends EventEmitter {
         log('registering user')
         const repo = await this.repo
 
-        const user = await register(username, password, AppUser.userNamespace)
+        let user = await register(username, password, AppUser.userNamespace)
         await repo.put(usernameKey, Buffer.from(username))
         //TODO: need to more securely store the private key here
         await repo.put(privateKeyKey, user.tree.key?.privateKey!)
 
+        if (AppUser.afterRegister) {
+            user = await AppUser.afterRegister(user)
+        }
         this.user = user
         this.userPromise = Promise.resolve(user)
-        AppUser.events.emit('registered', this)
+        AppUser.events.emit('registered', user)
         this.emit('update')
         log('done')
         return user

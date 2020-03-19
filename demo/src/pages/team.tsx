@@ -1,7 +1,7 @@
 import React, { useState, ChangeEvent, useEffect, FormEvent } from 'react';
 import { Box, Heading, Form, FormField, TextArea, Button, DropButton } from 'grommet';
-import { useAmbientUser, userNamespace } from '../util/user';
-import { useAmbientDatabase, } from '../util/usedatabase';
+import { userNamespace } from '../util/user';
+import { useAmbientDatabase, useAmbientUser } from 'ambient-react';
 import { Previous, Next } from 'grommet-icons';
 import { StandupReport, StandupProps } from '../components/standupreport';
 import { useParams } from 'react-router';
@@ -27,7 +27,7 @@ function UserAdder({ database }: { database: Database<DailyState, DailyAction>})
             throw new Error("must have an admin user")
         }
         database.dispatch(addUserAction(userName))
-        const userTree = await findUserAccount(userName, userNamespace)
+        const userTree = await findUserAccount(userName, Buffer.from(userNamespace))
         if (!userTree) {
             throw new Error("not found")
         }

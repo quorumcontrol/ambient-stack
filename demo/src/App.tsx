@@ -8,7 +8,7 @@ import {
 } from "react-router-dom";
 import { Login } from './pages/login';
 import { Team } from './pages/team';
-import { useAmbientUser } from './util/user';
+import { useAmbientUser } from 'ambient-react';
 import { PulseLoader } from 'react-spinners';
 import { Teams } from './pages/teams';
 import { Layout } from './pages/layout'

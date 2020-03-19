@@ -1,7 +1,7 @@
 import React, { useState, FormEvent, ChangeEvent } from 'react';
 import { Box, Heading, Form, FormField, Button, Text, Tabs, Tab } from 'grommet';
 import { PulseLoader } from 'react-spinners';
-import { useAmbientUser } from '../util/user';
+import { useAmbientUser } from 'ambient-react';
 import { Redirect } from "react-router";
 import debug from 'debug'
 
@@ -17,7 +17,7 @@ export function Login() {
         success: boolean,
     })
 
-    const {login,register} = useAmbientUser()
+    const { login, register } = useAmbientUser()
     const [index, setIndex] = useState(0);
 
     const onActive = (nextIndex: number) => setIndex(nextIndex);
@@ -78,43 +78,43 @@ export function Login() {
     return (
         <Box fill align="center" justify="center">
 
-        <Box width="large">
-            {state.loading && <PulseLoader />}
-            {!state.loading &&
-                <Tabs activeIndex={index} onActive={onActive}>
-                    <Tab title="Login">
-                        <Box pad="small">
-                            <Heading size="small">Login</Heading>
-                            <Text color="status-error">{state.error}</Text>
-                            <Form onSubmit={onLogin}>
-                                <FormField label="Username" value={state.username} name="username" onChange={onChange} />
-                                <FormField label="Password" value={state.password} name="password" type="password" onChange={onChange} />
-                                <Button primary type="submit" label="Login" />
-                                <Box margin={{ top: "1em" }}>
-                                    <Button plain label="Or register" onClick={() => setIndex(1)} />
-                                </Box>
+            <Box width="large">
+                {state.loading && <PulseLoader />}
+                {!state.loading &&
+                    <Tabs activeIndex={index} onActive={onActive}>
+                        <Tab title="Login">
+                            <Box pad="small">
+                                <Heading size="small">Login</Heading>
+                                <Text color="status-error">{state.error}</Text>
+                                <Form onSubmit={onLogin}>
+                                    <FormField label="Username" value={state.username} name="username" onChange={onChange} />
+                                    <FormField label="Password" value={state.password} name="password" type="password" onChange={onChange} />
+                                    <Button primary type="submit" label="Login" />
+                                    <Box margin={{ top: "1em" }}>
+                                        <Button plain label="Or register" onClick={() => setIndex(1)} />
+                                    </Box>
 
-                            </Form>
-                        </Box>
-                    </Tab>
-                    <Tab title="Register">
-                        <Box pad="small">
-                            <Heading size="small">Register</Heading>
-                            <Text color="status-error">{state.error}</Text>
-                            <Form onSubmit={onRegister}>
-                                <FormField label="Username" value={state.username} name="username" onChange={onChange} />
-                                <FormField label="Password" value={state.password} name="password" type="password" onChange={onChange} />
-                                <FormField label="Password Confirmation" value={state.passwordConfirmation} name="passwordConfirmation" type="password" onChange={onChange} />
-                                <Button primary type="submit" label="Register" />
-                                <Box margin={{ top: "1em" }}>
-                                    <Button plain label="Or login" onClick={() => setIndex(0)} />
-                                </Box>
-                            </Form>
-                        </Box>
-                    </Tab>
-                </Tabs>
-            }
-        </Box>
+                                </Form>
+                            </Box>
+                        </Tab>
+                        <Tab title="Register">
+                            <Box pad="small">
+                                <Heading size="small">Register</Heading>
+                                <Text color="status-error">{state.error}</Text>
+                                <Form onSubmit={onRegister}>
+                                    <FormField label="Username" value={state.username} name="username" onChange={onChange} />
+                                    <FormField label="Password" value={state.password} name="password" type="password" onChange={onChange} />
+                                    <FormField label="Password Confirmation" value={state.passwordConfirmation} name="passwordConfirmation" type="password" onChange={onChange} />
+                                    <Button primary type="submit" label="Register" />
+                                    <Box margin={{ top: "1em" }}>
+                                        <Button plain label="Or login" onClick={() => setIndex(0)} />
+                                    </Box>
+                                </Form>
+                            </Box>
+                        </Tab>
+                    </Tabs>
+                }
+            </Box>
         </Box>
     )
 }

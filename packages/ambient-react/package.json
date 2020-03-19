@@ -1,6 +1,6 @@
 {
   "name": "ambient-react",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "React hooks for using ambient-stack",
   "main": "lib/index.js",
   "scripts": {
@@ -9,14 +9,17 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@types/react": "^16.9.23",
     "@types/debug": "^4.1.5",
-    "ambient-stack": "file:../ambient-stack",
-    "debug": "^4.1.1",
-    "react": "^16.13.0",
-    "tupelo-wasm-sdk": "^0.6.0-rc8"
+    "debug": "^4.1.1"
+  },
+  "peerDependencies": {
+    "react": ">=16.0.0",
+    "ambient-stack": ">=0.0.1",
+    "tupelo-wasm-sdk": ">=0.6.0",
+    "automerge": ">=0.12.0"
   },
   "devDependencies": {
+    "@types/node": "^13.9.2",
     "tslib": "^1.11.1",
     "typescript": "^3.8.3"
   }
