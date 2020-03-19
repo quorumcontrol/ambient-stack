@@ -22,7 +22,7 @@
     "react-scripts": "3.3.0",
     "react-spinners": "^0.8.0",
     "styled-components": "^5.0.0",
-    "tupelo-wasm-sdk": "^0.6.0-rc5",
+    "tupelo-wasm-sdk": "^0.6.0-rc8",
     "typescript": "^3.7.5"
   },
   "scripts": {

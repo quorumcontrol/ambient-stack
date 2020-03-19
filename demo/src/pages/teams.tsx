@@ -5,7 +5,7 @@ import { Database } from 'ambient-stack'
 import { useAmbientDatabase } from '../util/usedatabase'
 import { UserTeamsReducer, UserTeamsState, UserTeamsStateUpdateEvt, UserTeamsStateActions } from '../util/teamdb'
 import debug from 'debug'
-import { Link, useHistory } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { DailyState, DailyStateReducer, DailyAction } from '../util/standupdb'
 import { PulseLoader } from 'react-spinners'
 

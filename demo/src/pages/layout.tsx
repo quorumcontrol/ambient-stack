@@ -3,6 +3,7 @@ import { Header, Button, Box, Text, Menu } from 'grommet'
 import { Home } from 'grommet-icons'
 import { useAmbientUser, getIcon } from '../util/user'
 import { useHistory } from 'react-router'
+import { Link } from 'react-router-dom'
 import { User } from '../../../lib'
 
 
@@ -42,7 +43,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         <Box fill>
             <Header background={{ color: "light-1" }} pad="small">
                 <div>
-                    <Button icon={<Home />}></Button>
+                    <Link to="/"><Button icon={<Home />}></Button></Link>
                     <Text>Async Daily Standups</Text>
                 </div>
                 {user ? <UserHeader user={user} logout={logout} /> : null}

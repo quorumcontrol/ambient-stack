@@ -1,6 +1,6 @@
 import React, { useState, ChangeEvent, useEffect, FormEvent } from 'react';
-import { Box, Heading, Text, Form, FormField, TextArea, Button, DropButton } from 'grommet';
-import { useAmbientUser, getIcon, userNamespace } from '../util/user';
+import { Box, Heading, Form, FormField, TextArea, Button, DropButton } from 'grommet';
+import { useAmbientUser, userNamespace } from '../util/user';
 import { useAmbientDatabase, } from '../util/usedatabase';
 import { Previous, Next } from 'grommet-icons';
 import { StandupReport, StandupProps } from '../components/standupreport';
@@ -81,7 +81,7 @@ export function Team() {
     useEffect(()=> {
         log("setting db once")
         db.once('initialSync', ()=> {
-            log("initial sync on home page")
+            log("initial sync on team page")
             setStandup((st) => { 
                 const newState = {...st}
                 const dbStandup = db.state?.standups[user!.userName] || {}

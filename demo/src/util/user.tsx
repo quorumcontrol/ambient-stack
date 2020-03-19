@@ -169,19 +169,21 @@ interface AmbientUserReturn {
 
 export function useAmbientUser(): AmbientUserReturn {
 
+    const intAppUser = appUser // need to put appUser into the local scope to avoid useEffect errors
+
     const [state, setState] = useState({ 
-        loading: !(appUser.user),
-        user: appUser.user, 
-        login: appUser.login.bind(appUser), 
-        logout: appUser.logout.bind(appUser),
-        register: appUser.register.bind(appUser),
+        loading: !(intAppUser.user),
+        user: intAppUser.user, 
+        login: intAppUser.login.bind(intAppUser), 
+        logout: intAppUser.logout.bind(intAppUser),
+        register: intAppUser.register.bind(intAppUser),
     } as AmbientUserReturn)
 
     useEffect(() => {
-        appUser.on('update', () => {
-            if (appUser.user) {
+        const onUpdate = () => {
+            if (intAppUser.user) {
                 setState((st) => {
-                    return { ...st, loading: false, user: appUser.user }
+                    return { ...st, loading: false, user: intAppUser.user }
                 })
                 return
             }
@@ -190,16 +192,21 @@ export function useAmbientUser(): AmbientUserReturn {
             setState((st) => {
                 return { ...st, loading: false, user: undefined }
             })
-        })
+        }
+        intAppUser.on('update', onUpdate)
 
         // in the case where it's already loaded, load it
-        if (appUser.user) {
+        if (intAppUser.user) {
             setState((st) => {
-                return { ...st, loading: false, user: appUser.user }
+                return { ...st, loading: false, user: intAppUser.user }
             })
             return
         }
-    }, [appUser])
+        return ()=> {
+            intAppUser.off('update', onUpdate)
+        }
+
+    }, [intAppUser])
 
     return state
 }

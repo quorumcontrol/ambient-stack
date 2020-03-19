@@ -19,27 +19,38 @@ export function useAmbientDatabase<S,A>(name:string, reducer:Reducer<S,A>):[disp
         }
     }, [user,db])
 
+    useEffect(()=> {
+        if (!db) {
+            return
+        }
+
+        const onUpdate = ()=> {
+            log('updating state: ', db.state)
+            setState(db.state)
+        }
+
+        const onSync = ()=> {
+            log('sync')
+            setState(db.state)
+        }
+
+        db.on('update', onUpdate)
+        db.once('initialLocalSync', onSync)
+        db.once('initialSync', onSync)
+
+        return ()=> {
+            db.off('update', onUpdate)
+            db.off('initialLocalSync', onSync)
+            db.off('initialSync', onSync)
+        }
+    }, [db])
+
     if (db !== undefined) {
         return [db.dispatch.bind(db), state as S, db]
     }
     const newDb = new Database<S,A>(name, reducer)
     setState(newDb.state)
     setDb(newDb)
-
-    newDb.on('update', ()=> {
-        log('updating state: ', newDb.state)
-        setState(newDb.state)
-    })
-
-    newDb.once('initialLocalSync', ()=> {
-        log('initial local sync')
-        setState(newDb.state)
-    })
-
-    newDb.once('initialSync', ()=> {
-        log('initial sync')
-        setState(newDb.state)
-    })
 
     return [newDb.dispatch.bind(newDb), state as S, newDb]
 }

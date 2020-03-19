@@ -1,5 +1,5 @@
-import React, { useState, FormEvent, ChangeEvent, useEffect } from 'react';
-import { Box, Heading, Form, FormField, Button, Header, Text, Tabs, Tab } from 'grommet';
+import React, { useState, FormEvent, ChangeEvent } from 'react';
+import { Box, Heading, Form, FormField, Button, Text, Tabs, Tab } from 'grommet';
 import { PulseLoader } from 'react-spinners';
 import { useAmbientUser } from '../util/user';
 import { Redirect } from "react-router";
@@ -18,7 +18,7 @@ export function Login() {
     })
 
     const {login,register} = useAmbientUser()
-    const [index, setIndex] = useState();
+    const [index, setIndex] = useState(0);
 
     const onActive = (nextIndex: number) => setIndex(nextIndex);
 

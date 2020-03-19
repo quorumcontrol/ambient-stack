@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grommet, Box, ThemeType } from 'grommet';
+import { Grommet, Box } from 'grommet';
 import {
   BrowserRouter as Router,
   Switch,
@@ -13,21 +13,6 @@ import { PulseLoader } from 'react-spinners';
 import { Teams } from './pages/teams';
 import { Layout } from './pages/layout'
 import { grommet } from "grommet/themes";
-import { register } from '../../lib';
-
-
-const theme: ThemeType = {
-  global: {
-    colors: {
-      text: "rgb(68, 68, 68)",
-    },
-    font: {
-      family: 'Roboto',
-      size: '18px',
-      height: '20px',
-    },
-  },
-};
 
 // A wrapper for <Route> that redirects to the login
 // screen if you're not yet authenticated.
