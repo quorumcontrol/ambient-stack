@@ -3,7 +3,7 @@ import { Tupelo, Community, EcdsaKey, ChainTree, setOwnershipTransaction, setDat
 import { EventEmitter } from 'events'
 import { getAppCommunity } from './community'
 import debug from 'debug'
-import { SimpleSyncher } from './simplesyncher'
+import { SimpleSyncer } from './simplesyncer'
 
 const log = debug('database')
 
@@ -50,8 +50,8 @@ export class Database<S, A> extends EventEmitter {
     private community: Promise<Community>
     private _did?: Promise<string>
     private dbTree?: ChainTree
-    private chainTreeSyncer: SimpleSyncher
-    private publishSyncer: SimpleSyncher
+    private chainTreeSyncer: SimpleSyncer
+    private publishSyncer: SimpleSyncer
     private lastPublished?: Automerge.FreezeObject<S>
 
     constructor(name: string, reducer: Reducer<S, A>) {
@@ -65,8 +65,8 @@ export class Database<S, A> extends EventEmitter {
         this.initiallyLoaded = false
         this.fullyLoaded = false
 
-        this.chainTreeSyncer = new SimpleSyncher("chaintree-updates", { onlyOne: true })
-        this.publishSyncer = new SimpleSyncher("publish-updates", { onlyOne: true })
+        this.chainTreeSyncer = new SimpleSyncer("chaintree-updates", { onlyOne: true })
+        this.publishSyncer = new SimpleSyncer("publish-updates", { onlyOne: true })
     }
 
     did(): Promise<string> {
