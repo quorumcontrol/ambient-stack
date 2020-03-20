@@ -7,27 +7,18 @@ import {
   Redirect,
 } from "react-router-dom";
 import { Login } from './pages/login';
-import { Home } from './pages/home';
-import { SSO } from './pages/sso';
-import { useAmbientUser } from './util/user';
-import { SSOReturnPage } from './pages/ssoreturn';
+import { Team } from './pages/team';
+import { useAmbientUser } from 'ambient-react';
 import { PulseLoader } from 'react-spinners';
-
-const theme = {
-  global: {
-    font: {
-      family: 'Roboto',
-      size: '18px',
-      height: '20px',
-    },
-  },
-};
+import { Teams } from './pages/teams';
+import { Layout } from './pages/layout'
+import { grommet } from "grommet/themes";
 
 // A wrapper for <Route> that redirects to the login
 // screen if you're not yet authenticated.
-function AuthenticatedRoute({ children, ...rest }:any) {
+function AuthenticatedRoute({ children, ...rest }: any) {
 
-  const {loading,user} = useAmbientUser()
+  const { loading, user } = useAmbientUser()
 
   if (loading) {
     return (
@@ -44,13 +35,13 @@ function AuthenticatedRoute({ children, ...rest }:any) {
         user ? (
           children
         ) : (
-          <Redirect
-            to={{
-              pathname: "/login",
-              state: { from: location }
-            }}
-          />
-        )
+            <Redirect
+              to={{
+                pathname: "/login",
+                state: { from: location }
+              }}
+            />
+          )
       }
     />
   );
@@ -59,26 +50,23 @@ function AuthenticatedRoute({ children, ...rest }:any) {
 
 const App: React.FC = () => {
   return (
-    <Grommet theme={theme}>
+    <Grommet theme={grommet}>
       <Router>
-
-        <Switch>
-          <Route path="/login">
-            <Login />
-          </Route>
-          <Route path="/sso">
-            <SSO />
-          </Route>
-          <Route path="/ssoreturn">
-            <SSOReturnPage />
-          </Route>
-          <AuthenticatedRoute path="/">
-            <Home />
-          </AuthenticatedRoute>
-        </Switch>
+        <Layout>
+          <Switch>
+            <Route path="/login">
+              <Login />
+            </Route>
+            <AuthenticatedRoute path="/teams/:teamName">
+              <Team />
+            </AuthenticatedRoute>
+            <AuthenticatedRoute path="/">
+              <Teams />
+            </AuthenticatedRoute>
+          </Switch>
+        </Layout>
 
       </Router>
-
     </Grommet>
   );
 }

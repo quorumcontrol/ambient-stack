@@ -1,12 +1,12 @@
 *-debug.log
 *-error.log
 /.nyc_output
-/dist
-/lib
-/tmp
+packages/**/dist
+packages/**/lib
+tmp
 /yarn.lock
 node_modules
 user.json
 .tmp
-/default
+**/default
 /tupelolocal

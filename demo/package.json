@@ -11,8 +11,8 @@
     "@types/react": "^16.9.17",
     "@types/react-dom": "^16.9.4",
     "@types/react-router-dom": "^5.1.3",
-    "ambient-cli": "file:../../ambient-cli",
-    "ambient-stack": "file:..",
+    "ambient-react": "latest",
+    "ambient-stack": "latest",
     "automerge": "^0.12.1",
     "grommet": "^2.10.0",
     "grommet-icons": "^4.4.0",
@@ -23,7 +23,7 @@
     "react-scripts": "3.3.0",
     "react-spinners": "^0.8.0",
     "styled-components": "^5.0.0",
-    "tupelo-wasm-sdk": "file:../tupelo-wasm-sdk",
+    "tupelo-wasm-sdk": "^0.6.0-rc8",
     "typescript": "^3.7.5"
   },
   "scripts": {

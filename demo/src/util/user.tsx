@@ -1,6 +1,6 @@
-import React, {useState, useEffect} from 'react'
-import { User, getAppCommunity } from 'ambient-stack';
-import { ChainTree, EcdsaKey } from 'tupelo-wasm-sdk';
+import React from 'react'
+import { User, Database } from 'ambient-stack';
+import debug from 'debug';
 
 import woman from '../images/woman.jpg'
 import man from '../images/man.jpg'
@@ -8,12 +8,30 @@ import carol from '../images/carol.jpg'
 import { User as UserIcon } from 'grommet-icons';
 import { Image } from 'grommet';
 
-interface AmbientUserReturn {
-    loading: boolean
-    user?:User
+import { UserTeamsState, UserTeamsReducer, UserTeamsStateUpdateEvt } from './teamdb';
+import { AppUser } from 'ambient-react';
+
+const log = debug("util.user")
+
+export const userNamespace = 'demo-only-async-daily-standups'
+
+AppUser.setUserNamespace(userNamespace)
+
+AppUser.afterRegister = async (user: User) => {
+    log('setting up teams database')
+    // setup their app database
+    const did = await user.tree.id()
+    const db = new Database<UserTeamsState, UserTeamsStateUpdateEvt>(user.userName + "-app-settings", UserTeamsReducer)
+    await db.create(user.tree.key!, {
+        writers: [did!],
+        initialState: {
+            teams: [],
+        }
+    })
+    return user
 }
 
-export function getIcon(name:string): JSX.Element{
+export function getIcon(name: string): JSX.Element {
     let userIcon
     if (name === undefined) {
         name = ""
@@ -29,38 +47,7 @@ export function getIcon(name:string): JSX.Element{
             userIcon = <Image fit="contain" src={carol} />;
             break;
         default:
-            userIcon = <UserIcon size="120px"/>
+            userIcon = <UserIcon size="120px" />
     }
     return userIcon
-}
-
-// returns [loading,user]
-export function useAmbientUser():AmbientUserReturn {
-    const [state,setState] = useState({loading: true} as AmbientUserReturn)
-    //TODO: key on much more than just the localStorage
-    const stored = sessionStorage.getItem("username")
-
-    useEffect(()=> {
-        
-        const fetchUser = async ()=> {
-            if (stored) {
-                console.log("awaiting app community")
-                const c = await getAppCommunity()
-                const key = await EcdsaKey.generate()
-                const tree = await ChainTree.newEmptyTree(c.blockservice, key)
-                setState({
-                    loading: false,
-                    user: new User(stored, tree, c)
-                })
-                return
-            }
-            setState({
-                loading: false
-            })
-        }
-        fetchUser()
-
-    },[stored])
-
-    return state
 }
