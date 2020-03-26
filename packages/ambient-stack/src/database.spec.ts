@@ -1,8 +1,5 @@
 import 'mocha'
 import { expect } from 'chai'
-
-import * as Automerge from 'automerge'
-
 import { Database } from './database'
 import { ChainTree, EcdsaKey } from 'tupelo-wasm-sdk'
 import { getAppCommunity } from './community'

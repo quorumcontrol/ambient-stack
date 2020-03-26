@@ -54,7 +54,7 @@ export const findUserAccount = async (username: string, appNamespace:Uint8Array)
     try {
         tip = await community.getTip(did)
     } catch (e) {
-        if (e === "not found") {
+        if (e.message.includes("not found")) {
             // do nothing, let tip be null
             return undefined
         }
@@ -110,6 +110,19 @@ export const register = async (username: string, password: string, appNamespace:
     const insecureKey = await insecureUsernameKey(username, appNamespace)
     const secureKey = await securePasswordKey(username, password)
     const secureKeyAddress = await secureKey.address()
+    const treeDid = await insecureKey.toDid()
+
+    try {
+        let tip = await c.getTip(treeDid)
+        if (tip) {
+            throw new Error("user already exists")
+        }
+    } catch(e) {
+        if (!(e.message.includes("not found"))) {
+            throw e
+        }
+        // otherwise we didn't find the user so we can proceed
+    }
 
     log("creating user chaintree")
     const userTree = await ChainTree.newEmptyTree(c.blockservice, insecureKey)
